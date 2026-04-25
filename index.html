@@ -1,0 +1,1551 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Eclipse Survivors V4 — One File</title>
+  <style>
+* { box-sizing: border-box; }
+html, body {
+  width: 100%; height: 100%; margin: 0; overflow: hidden;
+  background: #050611; color: #f4f7ff;
+  font-family: Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+}
+#gameCanvas { position: fixed; inset: 0; width: 100vw; height: 100vh; display: block; background: radial-gradient(circle at center, #14182d 0%, #050611 64%); }
+.hidden { display: none !important; }
+.visible { display: flex; }
+.hud { position: fixed; inset: 16px 16px auto 16px; pointer-events: none; z-index: 10; }
+.hud-top { display: flex; gap: 10px; align-items: stretch; flex-wrap: wrap; }
+.stat-card { min-width: 96px; padding: 10px 12px; border: 1px solid rgba(135,158,255,.22); border-radius: 16px; background: rgba(7,10,26,.66); backdrop-filter: blur(12px); box-shadow: 0 12px 34px rgba(0,0,0,.22); }
+.stat-card.wide { min-width: 240px; }
+.stat-card span { display: block; font-size: 11px; letter-spacing: .12em; color: rgba(217,227,255,.62); text-transform: uppercase; }
+.stat-card strong { display: block; margin-top: 2px; font-size: 17px; }
+.stat-row { display: flex; justify-content: space-between; align-items: center; margin-bottom: 7px; }
+.bar { height: 10px; border-radius: 999px; overflow: hidden; background: rgba(255,255,255,.08); border: 1px solid rgba(255,255,255,.08); }
+.bar div { height: 100%; width: 100%; border-radius: inherit; transition: width 120ms linear; }
+.bar.hp div { background: linear-gradient(90deg, #ff4d6d, #ff8fa3); box-shadow: 0 0 18px rgba(255,77,109,.7); }
+.bar.xp div { background: linear-gradient(90deg, #5ee7ff, #a58cff); box-shadow: 0 0 18px rgba(94,231,255,.7); }
+.weapon-list { margin-top: 10px; display: flex; flex-wrap: wrap; gap: 8px; max-width: 1000px; }
+.weapon-pill { padding: 8px 10px; border-radius: 999px; border: 1px solid rgba(255,255,255,.13); background: rgba(7,10,26,.56); color: rgba(244,247,255,.84); font-size: 13px; backdrop-filter: blur(10px); }
+.screen { position: fixed; inset: 0; z-index: 20; align-items: center; justify-content: center; padding: 22px; background: radial-gradient(circle at center, rgba(58,69,140,.18), rgba(0,0,0,.72)); backdrop-filter: blur(8px); }
+.panel { width: min(860px, 100%); border-radius: 28px; border: 1px solid rgba(150,171,255,.22); background: linear-gradient(135deg, rgba(22,27,58,.92), rgba(6,8,24,.94)), radial-gradient(circle at top left, rgba(111,235,255,.16), transparent 34%); box-shadow: 0 30px 90px rgba(0,0,0,.55), inset 0 1px 0 rgba(255,255,255,.08); padding: 34px; text-align: center; }
+.hero-panel h1 { margin: 5px 0 12px; font-size: clamp(42px, 8vw, 82px); line-height: .95; letter-spacing: -.06em; text-shadow: 0 0 30px rgba(119,235,255,.35); }
+.panel h2 { margin: 5px 0 12px; font-size: clamp(28px, 5vw, 48px); }
+.panel p { max-width: 740px; margin: 0 auto 22px; color: rgba(232,239,255,.75); line-height: 1.6; }
+.eyebrow { font-size: 12px; letter-spacing: .22em; text-transform: uppercase; color: #69e7ff; font-weight: 800; }
+.eyebrow.danger { color: #ff6b8a; }
+.controls { display: flex; justify-content: center; gap: 10px; flex-wrap: wrap; margin: 24px 0; }
+.controls span { padding: 10px 12px; border: 1px solid rgba(255,255,255,.11); border-radius: 999px; background: rgba(255,255,255,.06); color: rgba(244,247,255,.8); }
+.main-btn { appearance: none; border: 0; border-radius: 18px; padding: 14px 22px; background: linear-gradient(135deg, #7c5cff, #37ddff); color: #fff; font-size: 17px; font-weight: 800; cursor: pointer; box-shadow: 0 18px 38px rgba(69,204,255,.22), inset 0 1px 0 rgba(255,255,255,.25); transition: transform 140ms ease, filter 140ms ease; }
+.main-btn:hover { transform: translateY(-1px); filter: brightness(1.08); }
+.main-btn:active { transform: translateY(1px) scale(.99); }
+.main-btn.secondary { background: linear-gradient(135deg, #37406d, #6670b0); }
+.small-panel { width: min(520px, 100%); }
+.level-panel { width: min(1060px, 100%); }
+.rarity-help { margin-top: -4px !important; margin-bottom: 18px !important; display: flex; gap: 8px; justify-content: center; flex-wrap: wrap; }
+.rarity-chip { font-size: 11px; font-weight: 900; letter-spacing: .09em; padding: 7px 10px; border-radius: 999px; border: 1px solid rgba(255,255,255,.16); text-transform: uppercase; }
+.rarity-chip.common { color: #9dd9ff; background: rgba(85, 174, 255, .12); }
+.rarity-chip.rare { color: #d5b0ff; background: rgba(181, 115, 255, .15); }
+.rarity-chip.epic { color: #ffe18d; background: rgba(255, 207, 90, .16); }
+.upgrade-grid { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 16px; margin-top: 18px; }
+.upgrade-card { min-height: 288px; padding: 18px; border-radius: 24px; cursor: pointer; text-align: left; transition: transform 150ms ease, border-color 150ms ease, background 150ms ease, box-shadow 150ms ease; position: relative; overflow: hidden; color: #f7f9ff; }
+.upgrade-card::before { content: ""; position: absolute; inset: 0; height: 9px; opacity: .95; }
+.upgrade-card::after { content: ""; position: absolute; right: -55px; top: -55px; width: 180px; height: 180px; border-radius: 50%; filter: blur(18px); opacity: .26; }
+.upgrade-card:hover { transform: translateY(-5px); }
+.upgrade-card.common { border: 2px solid rgba(120, 199, 255, .62); background: linear-gradient(180deg, rgba(24,50,76,.82), rgba(8,11,27,.88)); box-shadow: inset 0 0 0 1px rgba(127,200,255,.16); }
+.upgrade-card.common::before, .upgrade-card.common::after { background: #75cfff; }
+.upgrade-card.rare { border: 2px solid rgba(186,120,255,.75); background: linear-gradient(180deg, rgba(54,26,86,.86), rgba(8,11,27,.9)); box-shadow: 0 0 30px rgba(181,115,255,.18), inset 0 0 0 1px rgba(221,184,255,.18); }
+.upgrade-card.rare::before, .upgrade-card.rare::after { background: #bd78ff; }
+.upgrade-card.epic { border: 2px solid rgba(255,210,79,.86); background: linear-gradient(180deg, rgba(94,65,12,.9), rgba(15,13,24,.92)); box-shadow: 0 0 38px rgba(255,207,90,.25), inset 0 0 0 1px rgba(255,238,160,.20); }
+.upgrade-card.epic::before, .upgrade-card.epic::after { background: #ffd866; }
+.upgrade-topline { position: relative; display: flex; justify-content: space-between; gap: 10px; align-items: center; margin-bottom: 12px; padding-top: 6px; }
+.upgrade-sprite { position: relative; width: 74px; height: 74px; border-radius: 22px; display: grid; place-items: center; margin: 2px 0 13px; background: radial-gradient(circle at 35% 25%, rgba(255,255,255,.26), rgba(255,255,255,.06) 42%, rgba(0,0,0,.16)); border: 1px solid rgba(255,255,255,.20); box-shadow: inset 0 1px 0 rgba(255,255,255,.18), 0 16px 30px rgba(0,0,0,.18); overflow: hidden; }
+.upgrade-sprite::before { content: ""; position: absolute; inset: -45%; background: conic-gradient(from 0deg, transparent, rgba(255,255,255,.22), transparent 38%); animation: spriteSpin 4.8s linear infinite; opacity: .55; }
+.upgrade-sprite svg { position: relative; width: 54px; height: 54px; filter: drop-shadow(0 0 12px currentColor); }
+.upgrade-card.common .upgrade-sprite { color: #8ddeff; }
+.upgrade-card.rare .upgrade-sprite { color: #d59dff; }
+.upgrade-card.epic .upgrade-sprite { color: #ffe071; }
+.upgrade-card.gear .upgrade-kind { background: rgba(255,255,255,.18); color: #9fffd8; }
+@keyframes spriteSpin { to { transform: rotate(360deg); } }
+
+.upgrade-key { display: inline-flex; align-items: center; justify-content: center; width: 34px; height: 34px; border-radius: 12px; background: rgba(255,255,255,.14); font-weight: 1000; font-size: 18px; }
+.upgrade-rarity { font-size: 12px; letter-spacing: .12em; text-transform: uppercase; font-weight: 1000; padding: 7px 10px; border-radius: 999px; border: 1px solid rgba(255,255,255,.18); background: rgba(0,0,0,.22); }
+.upgrade-kind { position: relative; display: inline-block; margin-bottom: 10px; padding: 6px 9px; border-radius: 999px; background: rgba(255,255,255,.11); font-size: 11px; letter-spacing: .12em; text-transform: uppercase; font-weight: 900; }
+.upgrade-title { position: relative; font-size: 23px; line-height: 1.1; font-weight: 1000; margin-bottom: 10px; }
+.upgrade-description { position: relative; color: rgba(232,239,255,.78); line-height: 1.5; font-size: 15px; }
+.upgrade-card.weapon .upgrade-kind { background: rgba(255,255,255,.18); color: #fff2a6; }
+.final-stats { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 10px; margin: 20px 0 24px; }
+.final-stats div { padding: 12px; border-radius: 16px; background: rgba(255,255,255,.07); text-align: left; }
+.final-stats span { display: block; font-size: 11px; letter-spacing: .12em; text-transform: uppercase; color: rgba(232,239,255,.58); }
+.final-stats strong { display: block; margin-top: 4px; font-size: 22px; }
+.boss-notice { position: fixed; z-index: 14; top: 95px; left: 50%; transform: translateX(-50%); padding: 13px 18px; border-radius: 999px; border: 1px solid rgba(255, 221, 119, .55); background: rgba(18, 13, 27, .76); color: #ffe292; font-weight: 1000; letter-spacing: .09em; text-transform: uppercase; box-shadow: 0 0 36px rgba(255, 196, 82, .25); backdrop-filter: blur(10px); pointer-events: none; }
+@media (max-width: 860px) { .upgrade-grid { grid-template-columns: 1fr; } .stat-card.wide { min-width: 180px; flex: 1 1 180px; } .panel { padding: 22px; } .upgrade-card { min-height: 245px; } }
+
+  </style>
+</head>
+<body>
+  <canvas id="gameCanvas"></canvas>
+
+  <div id="bossNotice" class="boss-notice hidden"></div>
+
+  <div id="hud" class="hud hidden">
+    <div class="hud-top">
+      <div class="stat-card wide">
+        <div class="stat-row"><span>HP</span><strong id="hpText">100 / 100</strong></div>
+        <div class="bar hp"><div id="hpFill"></div></div>
+      </div>
+      <div class="stat-card wide">
+        <div class="stat-row"><span>XP</span><strong id="xpText">0 / 25</strong></div>
+        <div class="bar xp"><div id="xpFill"></div></div>
+      </div>
+      <div class="stat-card"><span>LVL</span><strong id="levelText">1</strong></div>
+      <div class="stat-card"><span>TIME</span><strong id="timeText">00:00</strong></div>
+      <div class="stat-card"><span>KILLS</span><strong id="killsText">0</strong></div>
+      <div class="stat-card"><span>WAVE</span><strong id="waveText">1</strong></div>
+    </div>
+    <div class="weapon-list" id="weaponList"></div>
+  </div>
+
+  <div id="startScreen" class="screen visible">
+    <div class="panel hero-panel">
+      <div class="eyebrow">HTML5 Canvas Prototype · V2</div>
+      <h1>Eclipse Survivors</h1>
+      <p>
+        Теперь забег начинается только с <b>Magic Bolt</b>. Остальные оружия открываются через прокачку:
+        клинки, зоны, новы, мины, метеоры, цепные молнии, дроны, серпы и гравитационные воронки.
+      </p>
+      <div class="controls">
+        <span><b>WASD</b> движение</span>
+        <span><b>P / Esc</b> пауза</span>
+        <span><b>1 / 2 / 3</b> выбрать улучшение</span>
+      </div>
+      <button id="startBtn" class="main-btn">Начать забег</button>
+    </div>
+  </div>
+
+  <div id="pauseScreen" class="screen hidden">
+    <div class="panel small-panel">
+      <h2>Пауза</h2>
+      <p>Нажми <b>P</b> или <b>Esc</b>, чтобы продолжить.</p>
+      <button id="resumeBtn" class="main-btn secondary">Продолжить</button>
+    </div>
+  </div>
+
+  <div id="levelUpScreen" class="screen hidden">
+    <div class="panel level-panel">
+      <div class="eyebrow">Level Up</div>
+      <h2>Выбери усиление</h2>
+      <p class="rarity-help">
+        <span class="rarity-chip common">COMMON · обычная</span>
+        <span class="rarity-chip rare">RARE · редкая</span>
+        <span class="rarity-chip epic">EPIC · эпическая</span>
+      </p>
+      <div id="upgradeCards" class="upgrade-grid"></div>
+    </div>
+  </div>
+
+  <div id="gameOverScreen" class="screen hidden">
+    <div class="panel small-panel">
+      <div class="eyebrow danger">Run Ended</div>
+      <h2>Game Over</h2>
+      <div id="finalStats" class="final-stats"></div>
+      <button id="restartBtn" class="main-btn">Заново</button>
+    </div>
+  </div>
+
+  <script>
+"use strict";
+
+const canvas = document.getElementById("gameCanvas");
+const ctx = canvas.getContext("2d");
+
+const TAU = Math.PI * 2;
+const clamp = (value, min, max) => Math.max(min, Math.min(max, value));
+const lerp = (a, b, t) => a + (b - a) * t;
+const rand = (min, max) => min + Math.random() * (max - min);
+const compactInPlace = (arr, keep) => {
+  let w = 0;
+  for (let r = 0; r < arr.length; r++) {
+    const item = arr[r];
+    if (keep(item)) {
+      if (w !== r) arr[w] = item;
+      w++;
+    }
+  }
+  if (w !== arr.length) arr.length = w;
+};
+const distSq = (a, b, c, d) => {
+  const dx = a - c;
+  const dy = b - d;
+  return dx * dx + dy * dy;
+};
+const circleHit = (a, b) => distSq(a.x, a.y, b.x, b.y) <= (a.radius + b.radius) ** 2;
+const angleDiff = (a, b) => Math.atan2(Math.sin(a - b), Math.cos(a - b));
+
+function formatTime(seconds) {
+  const total = Math.floor(seconds);
+  const min = Math.floor(total / 60).toString().padStart(2, "0");
+  const sec = (total % 60).toString().padStart(2, "0");
+  return `${min}:${sec}`;
+}
+
+
+const HERO_PALETTES = [
+  { main: "#65f4ff", dark: "#153d55", glow: "rgba(101,244,255,.34)", accent: "#ffffff" },
+  { main: "#ff7ad9", dark: "#56194a", glow: "rgba(255,122,217,.34)", accent: "#fff2fb" },
+  { main: "#a3ff6c", dark: "#27551a", glow: "rgba(163,255,108,.32)", accent: "#f3ffe8" },
+  { main: "#ffd45f", dark: "#5a4015", glow: "rgba(255,212,95,.32)", accent: "#fff7d8" },
+  { main: "#9d8cff", dark: "#27205c", glow: "rgba(157,140,255,.34)", accent: "#f2efff" },
+  { main: "#ff6b7d", dark: "#5d1825", glow: "rgba(255,107,125,.33)", accent: "#fff0f2" },
+];
+const randomHeroPalette = () => HERO_PALETTES[Math.floor(Math.random() * HERO_PALETTES.length)];
+
+class InputManager {
+  constructor(game) {
+    this.game = game;
+    this.keys = new Set();
+
+    window.addEventListener("keydown", (event) => {
+      const key = event.key.toLowerCase();
+      this.keys.add(key);
+
+      if (["w", "a", "s", "d", "arrowup", "arrowdown", "arrowleft", "arrowright", " ", "escape"].includes(key)) {
+        event.preventDefault();
+      }
+
+      if (key === "p" || key === "escape") this.game.togglePause();
+      if (this.game.state === "levelup" && ["1", "2", "3"].includes(key)) this.game.upgradeSystem.choose(Number(key) - 1);
+      if (this.game.state === "start" && key === " ") this.game.startRun();
+    });
+
+    window.addEventListener("keyup", (event) => this.keys.delete(event.key.toLowerCase()));
+  }
+
+  axis() {
+    let x = 0;
+    let y = 0;
+    if (this.keys.has("a") || this.keys.has("arrowleft")) x -= 1;
+    if (this.keys.has("d") || this.keys.has("arrowright")) x += 1;
+    if (this.keys.has("w") || this.keys.has("arrowup")) y -= 1;
+    if (this.keys.has("s") || this.keys.has("arrowdown")) y += 1;
+    if (x !== 0 || y !== 0) {
+      const length = Math.sqrt(x * x + y * y);
+      x /= length;
+      y /= length;
+    }
+    return { x, y };
+  }
+}
+
+class Camera {
+  constructor() {
+    this.x = 0;
+    this.y = 0;
+    this.shake = 0;
+    this.offsetX = 0;
+    this.offsetY = 0;
+  }
+
+  update(target, dt) {
+    const smooth = 1 - Math.pow(0.001, dt);
+    this.x = lerp(this.x, target.x, smooth);
+    this.y = lerp(this.y, target.y, smooth);
+
+    if (this.shake > 0) {
+      this.shake = Math.max(0, this.shake - dt * 10.5);
+      const soft = this.shake * 0.48;
+      this.offsetX = rand(-soft, soft);
+      this.offsetY = rand(-soft, soft);
+    } else {
+      this.offsetX = 0;
+      this.offsetY = 0;
+    }
+  }
+
+  addShake(amount) {
+    // Тряска оставлена, но намеренно сильно ослаблена, чтобы не болела голова.
+    this.shake = Math.min(7, this.shake + amount * 0.38);
+  }
+
+  begin(ctx, game) {
+    ctx.save();
+    ctx.translate(game.width / 2 - this.x + this.offsetX, game.height / 2 - this.y + this.offsetY);
+  }
+
+  end(ctx) { ctx.restore(); }
+}
+
+class Particle {
+  constructor(x, y, options = {}) {
+    this.x = x;
+    this.y = y;
+    this.vx = options.vx ?? rand(-80, 80);
+    this.vy = options.vy ?? rand(-80, 80);
+    this.radius = options.radius ?? rand(2, 5);
+    this.life = options.life ?? rand(0.25, 0.75);
+    this.maxLife = this.life;
+    this.color = options.color ?? "#9ee8ff";
+    this.drag = options.drag ?? 4;
+    this.grow = options.grow ?? 0;
+  }
+
+  update(dt) {
+    this.life -= dt;
+    this.x += this.vx * dt;
+    this.y += this.vy * dt;
+    this.vx *= Math.max(0, 1 - this.drag * dt);
+    this.vy *= Math.max(0, 1 - this.drag * dt);
+    this.radius += this.grow * dt;
+  }
+
+  draw(ctx) {
+    const alpha = clamp(this.life / this.maxLife, 0, 1);
+    ctx.globalAlpha = alpha;
+    ctx.fillStyle = this.color;
+    ctx.beginPath();
+    ctx.arc(this.x, this.y, Math.max(0.5, this.radius), 0, TAU);
+    ctx.fill();
+    ctx.globalAlpha = 1;
+  }
+
+  get dead() { return this.life <= 0 || this.radius <= 0; }
+}
+
+class ExperienceOrb {
+  constructor(x, y, value) {
+    this.x = x;
+    this.y = y;
+    this.value = value;
+    this.radius = 6 + Math.min(10, value * 0.13);
+    this.vx = rand(-35, 35);
+    this.vy = rand(-35, 35);
+    this.life = 120;
+    this.phase = Math.random() * TAU;
+    this.magnetized = false;
+  }
+
+  update(dt, game) {
+    this.life -= dt;
+    this.phase += dt * 5;
+    const player = game.player;
+    const dx = player.x - this.x;
+    const dy = player.y - this.y;
+    const d = Math.sqrt(dx * dx + dy * dy) || 1;
+
+    if (d < player.magnetRadius) {
+      this.magnetized = true;
+      const force = 900 * (1 - d / player.magnetRadius) + 240;
+      this.vx += (dx / d) * force * dt;
+      this.vy += (dy / d) * force * dt;
+    }
+
+    this.x += this.vx * dt;
+    this.y += this.vy * dt;
+    this.vx *= Math.max(0, 1 - dt * (this.magnetized ? 1.2 : 2.8));
+    this.vy *= Math.max(0, 1 - dt * (this.magnetized ? 1.2 : 2.8));
+
+    if (d < player.radius + this.radius + 4) {
+      player.gainExperience(this.value);
+      game.xpCollected += this.value;
+      game.spawnParticles(this.x, this.y, 7, "#66f0ff", 0.45, 2.2);
+      this.life = 0;
+    }
+  }
+
+  draw(ctx) {
+    const pulse = 1 + Math.sin(this.phase) * 0.12;
+    ctx.save();
+    ctx.translate(this.x, this.y);
+    ctx.rotate(this.phase * 0.55);
+    ctx.fillStyle = "#7af3ff";
+    ctx.strokeStyle = "rgba(255,255,255,0.75)";
+    ctx.lineWidth = 1.5;
+    ctx.beginPath();
+    ctx.moveTo(0, -this.radius * pulse);
+    ctx.lineTo(this.radius * 0.8 * pulse, 0);
+    ctx.lineTo(0, this.radius * pulse);
+    ctx.lineTo(-this.radius * 0.8 * pulse, 0);
+    ctx.closePath();
+    ctx.fill();
+    ctx.stroke();
+    ctx.restore();
+  }
+
+  get dead() { return this.life <= 0; }
+}
+
+class Projectile {
+  constructor(x, y, vx, vy, damage, radius, life = 2.2, options = {}) {
+    this.x = x;
+    this.y = y;
+    this.vx = vx;
+    this.vy = vy;
+    this.damage = damage;
+    this.radius = radius;
+    this.life = life;
+    this.maxLife = life;
+    this.trail = [];
+    this.pierce = options.pierce ?? 0;
+    this.color = options.color ?? "#7bf5ff";
+    this.hitColor = options.hitColor ?? this.color;
+    this.hitEnemies = new Set();
+    this.onHit = options.onHit ?? null;
+    this.knockback = options.knockback ?? 0;
+  }
+
+  update(dt, game) {
+    this.life -= dt;
+    this.trail.push({ x: this.x, y: this.y, life: 0.18 });
+    if (this.trail.length > 12) this.trail.shift();
+    for (const point of this.trail) point.life -= dt;
+    this.trail = this.trail.filter((point) => point.life > 0);
+
+    this.x += this.vx * dt;
+    this.y += this.vy * dt;
+
+    const nearby = game.getEnemiesNear(this.x, this.y, this.radius + 45);
+    for (const enemy of nearby) {
+      if (enemy.dead || this.hitEnemies.has(enemy)) continue;
+      if (circleHit(this, enemy)) {
+        this.hitEnemies.add(enemy);
+        enemy.takeDamage(this.damage, game, this.hitColor);
+        if (this.knockback > 0) {
+          const ex = enemy.x - this.x;
+          const ey = enemy.y - this.y;
+          const d = Math.sqrt(ex * ex + ey * ey) || 1;
+          enemy.x += (ex / d) * this.knockback;
+          enemy.y += (ey / d) * this.knockback;
+        }
+        if (this.onHit) this.onHit(enemy, game, this);
+        game.spawnParticles(this.x, this.y, 5, this.hitColor, 0.25, 1.8);
+        game.camera.addShake(0.35);
+        if (this.pierce <= 0) {
+          this.life = 0;
+          break;
+        }
+        this.pierce -= 1;
+      }
+    }
+  }
+
+  draw(ctx) {
+    ctx.lineCap = "round";
+    const trailLen = this.trail.length;
+    if (trailLen) {
+      ctx.strokeStyle = this.color;
+      const last = this.trail[trailLen - 1];
+      ctx.globalAlpha = 0.45;
+      ctx.lineWidth = this.radius * 1.4;
+      ctx.beginPath();
+      ctx.moveTo(last.x, last.y);
+      ctx.lineTo(this.x, this.y);
+      ctx.stroke();
+    }
+    ctx.globalAlpha = clamp(this.life / this.maxLife, 0, 1);
+    ctx.fillStyle = "#ffffff";
+    ctx.beginPath();
+    ctx.arc(this.x, this.y, this.radius, 0, TAU);
+    ctx.fill();
+    ctx.fillStyle = this.color;
+    ctx.beginPath();
+    ctx.arc(this.x, this.y, this.radius * 2.0, 0, TAU);
+    ctx.globalAlpha *= 0.35;
+    ctx.fill();
+    ctx.globalAlpha = 1;
+  }
+
+  get dead() { return this.life <= 0; }
+}
+
+class Player {
+  constructor(game) {
+    this.game = game;
+    this.x = 0;
+    this.y = 0;
+    this.radius = 18;
+    this.maxHp = 120;
+    this.hp = this.maxHp;
+    this.baseSpeed = 178;
+    this.speedMult = 1;
+    this.level = 1;
+    this.xp = 0;
+    this.xpToNext = 26;
+    this.pendingLevelUps = 0;
+    this.magnetRadius = 125;
+    this.damageMult = 1;
+    this.cooldownMult = 1;
+    this.projectileSpeedMult = 1;
+    this.zoneSizeMult = 1;
+    this.invulnerable = 0;
+    this.stepPhase = 0;
+    this.palette = randomHeroPalette();
+    this.facing = 0;
+    this.regen = 0;
+    this.lifeOnKill = 0;
+    this.slowAura = 0;
+    this.auraTick = 0;
+    this.shieldMax = 0;
+    this.shieldCharges = 0;
+    this.shieldCooldown = 0;
+    this.xpMult = 1;
+    this.reviveCharges = 0;
+    this.thornDamage = 0;
+    this.dodgeChance = 0;
+  }
+
+  update(dt) {
+    this.invulnerable = Math.max(0, this.invulnerable - dt);
+    const axis = this.game.input.axis();
+    const speed = this.baseSpeed * this.speedMult;
+    this.x += axis.x * speed * dt;
+    this.y += axis.y * speed * dt;
+    if (axis.x || axis.y) {
+      this.stepPhase += dt * 11.5;
+      this.facing = Math.atan2(axis.y, axis.x);
+    }
+    if (this.regen > 0 && this.hp > 0 && this.hp < this.maxHp) this.heal(this.regen * dt);
+    if (this.shieldMax > 0 && this.shieldCharges < this.shieldMax) {
+      this.shieldCooldown -= dt;
+      if (this.shieldCooldown <= 0) {
+        this.shieldCharges += 1;
+        this.shieldCooldown = 18;
+        this.game.spawnParticles(this.x, this.y, 18, this.palette.main, .55, 2.4);
+      }
+    }
+  }
+
+  updateAuras(dt) {
+    if (this.slowAura <= 0) return;
+    this.auraTick -= dt;
+    if (this.auraTick > 0) return;
+    this.auraTick = .24;
+    const nearby = this.game.getEnemiesNear(this.x, this.y, 175);
+    for (const enemy of nearby) enemy.applySlow(this.slowAura, .32);
+  }
+
+  draw(ctx) {
+    const axis = this.game.input.axis();
+    const moving = axis.x || axis.y;
+    const walk = moving ? Math.sin(this.stepPhase) : 0;
+    const t = performance.now() / 1000;
+    const pulse = 1 + Math.sin(t * 5.6) * 0.035;
+    const bob = moving ? Math.sin(this.stepPhase * 2) * 1.8 : Math.sin(t * 2.2) * 0.7;
+
+    ctx.save();
+    ctx.translate(this.x, this.y + bob);
+    ctx.rotate(this.facing + walk * 0.06);
+
+    const aura = ctx.createRadialGradient(0, 0, 3, 0, 0, 95);
+    aura.addColorStop(0, this.palette.glow);
+    aura.addColorStop(0.48, "rgba(124, 92, 255, 0.11)");
+    aura.addColorStop(1, "rgba(124, 92, 255, 0)");
+    ctx.fillStyle = aura;
+    ctx.beginPath(); ctx.arc(0, 0, 95, 0, TAU); ctx.fill();
+
+    if (this.slowAura > 0) {
+      ctx.globalAlpha = .18 + Math.sin(t * 4) * .04;
+      ctx.strokeStyle = this.palette.main;
+      ctx.lineWidth = 2;
+      ctx.beginPath(); ctx.arc(0, 0, 175, 0, TAU); ctx.stroke();
+      ctx.globalAlpha = 1;
+    }
+
+    ctx.globalAlpha = this.invulnerable > 0 ? 0.72 : 1;
+    ctx.shadowBlur = 24;
+    ctx.shadowColor = this.palette.main;
+    ctx.lineJoin = "round";
+    ctx.lineCap = "round";
+
+    const legSwing = moving ? Math.sin(this.stepPhase) * 4.5 : 0;
+    ctx.strokeStyle = this.palette.main;
+    ctx.fillStyle = this.palette.dark;
+    ctx.lineWidth = 3;
+
+    // Ноги — маленькие кристаллические стабилизаторы, двигаются при ходьбе.
+    for (const side of [-1, 1]) {
+      ctx.beginPath();
+      ctx.moveTo(-8, side * 6);
+      ctx.lineTo(-18 - Math.abs(legSwing) * 0.25, side * (9 + legSwing * .22));
+      ctx.lineTo(-11, side * 15);
+      ctx.closePath();
+      ctx.fill(); ctx.stroke();
+    }
+
+    // Плечевые пластины/крылья — герой читается как отдельная моделька, не просто круг.
+    ctx.fillStyle = this.palette.dark;
+    for (const side of [-1, 1]) {
+      ctx.beginPath();
+      ctx.moveTo(-3, side * 15);
+      ctx.lineTo(8 + Math.abs(walk) * 2, side * 28);
+      ctx.lineTo(22, side * 15);
+      ctx.lineTo(9, side * 7);
+      ctx.closePath();
+      ctx.fill(); ctx.stroke();
+    }
+
+    // Тело — вытянутый шестиугольный кристалл.
+    ctx.fillStyle = this.palette.dark;
+    ctx.lineWidth = 3.5;
+    ctx.beginPath();
+    ctx.moveTo(21 * pulse, 0);
+    ctx.lineTo(9, -18 * pulse);
+    ctx.lineTo(-14, -16);
+    ctx.lineTo(-23, 0);
+    ctx.lineTo(-14, 16);
+    ctx.lineTo(9, 18 * pulse);
+    ctx.closePath();
+    ctx.fill(); ctx.stroke();
+
+    // Светящееся ядро.
+    const core = ctx.createRadialGradient(1, 0, 0, 1, 0, 15);
+    core.addColorStop(0, "#ffffff");
+    core.addColorStop(.45, this.palette.main);
+    core.addColorStop(1, "rgba(255,255,255,0)");
+    ctx.fillStyle = core;
+    ctx.beginPath();
+    ctx.arc(1, 0, 13 + Math.sin(t * 8) * 1.2, 0, TAU);
+    ctx.fill();
+
+    // Голова — отдельный маленький ромб впереди.
+    ctx.shadowBlur = 16;
+    ctx.fillStyle = this.palette.main;
+    ctx.strokeStyle = this.palette.accent;
+    ctx.lineWidth = 2.2;
+    ctx.beginPath();
+    ctx.moveTo(30, 0);
+    ctx.lineTo(18, -8);
+    ctx.lineTo(10, 0);
+    ctx.lineTo(18, 8);
+    ctx.closePath();
+    ctx.fill(); ctx.stroke();
+
+    // Глаз/визор.
+    ctx.shadowBlur = 8;
+    ctx.fillStyle = this.palette.accent;
+    ctx.beginPath();
+    ctx.arc(22, 0, 2.4, 0, TAU);
+    ctx.fill();
+
+    if (this.dodgeChance > 0) {
+      ctx.globalAlpha = .22 + Math.sin(t * 8) * .06;
+      ctx.strokeStyle = "#d7cbff";
+      ctx.lineWidth = 2;
+      ctx.beginPath();
+      ctx.ellipse(0, 0, 38, 26, 0, 0, TAU);
+      ctx.stroke();
+      ctx.globalAlpha = 1;
+    }
+
+    if (this.shieldCharges > 0) {
+      ctx.globalAlpha = .44;
+      ctx.strokeStyle = "#dffcff";
+      ctx.lineWidth = 3;
+      ctx.beginPath();
+      ctx.arc(0, 0, this.radius + 18 + Math.sin(t * 6) * 2, 0, TAU);
+      ctx.stroke();
+      ctx.globalAlpha = 1;
+    }
+    ctx.restore();
+  }
+
+  takeDamage(amount) {
+    if (this.invulnerable > 0) return;
+
+    if (this.dodgeChance > 0 && Math.random() < this.dodgeChance) {
+      this.invulnerable = .24;
+      this.game.spawnParticles(this.x, this.y, 18, "#d7cbff", .42, 2.6);
+      this.game.camera.addShake(.22);
+      this.game.showNotice("PHANTOM CLOAK: уклонение");
+      return;
+    }
+
+    if (this.shieldCharges > 0) {
+      this.shieldCharges -= 1;
+      this.shieldCooldown = 18;
+      this.invulnerable = .18;
+      this.game.spawnParticles(this.x, this.y, 26, "#dffcff", .62, 3.1);
+      this.game.camera.addShake(.85);
+      this.game.showNotice("AEGIS PRISM заблокировал удар");
+      return;
+    }
+
+    this.hp = Math.max(0, this.hp - amount);
+    this.invulnerable = 0.16;
+    this.game.spawnParticles(this.x, this.y, 12, "#ff5c7f", 0.42, 2.2);
+    this.game.camera.addShake(0.72);
+
+    if (this.thornDamage > 0) {
+      const nearby = this.game.getEnemiesNear(this.x, this.y, 105);
+      for (const enemy of nearby) {
+        if (!enemy.dead) enemy.takeDamage(this.thornDamage, this.game, "#ffb36e");
+      }
+      this.game.spawnParticles(this.x, this.y, 16, "#ffb36e", .34, 2.2);
+    }
+
+    if (this.hp <= 0 && this.reviveCharges > 0) {
+      this.reviveCharges -= 1;
+      this.hp = Math.ceil(this.maxHp * .45);
+      this.invulnerable = 2.2;
+      this.game.spawnParticles(this.x, this.y, 80, "#ffcf5a", .95, 4.2);
+      this.game.camera.addShake(2.1);
+      this.game.showNotice("PHOENIX EMBER: второй шанс");
+      return;
+    }
+
+    if (this.hp <= 0) this.game.endRun();
+  }
+
+  heal(amount) { this.hp = Math.min(this.maxHp, this.hp + amount); }
+
+  gainExperience(amount) {
+    amount = Math.ceil(amount * this.xpMult);
+    this.xp += amount;
+    while (this.xp >= this.xpToNext) {
+      this.xp -= this.xpToNext;
+      this.level += 1;
+      this.xpToNext = Math.floor(24 + this.level * 15 + Math.pow(this.level, 1.42) * 4);
+      this.pendingLevelUps += 1;
+    }
+    if (this.pendingLevelUps > 0 && this.game.state === "playing") this.game.openLevelUp();
+  }
+}
+
+const ENEMY_TYPES = {
+  skitter: { name: "Skitter Wisp", radius: 13, hp: 15, speed: 98, damage: 7, xp: 4, color: "#72ffaf", body: "#145f47", shape: "wispArrow", behavior: "direct" },
+  needle: { name: "Needle Imp", radius: 11, hp: 12, speed: 138, damage: 6, xp: 4, color: "#9dfffc", body: "#124b55", shape: "needle", behavior: "zigzag" },
+  husk: { name: "Ash Husk", radius: 18, hp: 38, speed: 61, damage: 12, xp: 7, color: "#ff9a62", body: "#653017", shape: "ashBlob", behavior: "direct" },
+  stalker: { name: "Moon Stalker", radius: 17, hp: 46, speed: 82, damage: 13, xp: 8, color: "#83a2ff", body: "#1d2d69", shape: "crescent", behavior: "orbiter" },
+  rammer: { name: "Crimson Ram", radius: 21, hp: 64, speed: 56, damage: 19, xp: 11, color: "#ff5a75", body: "#62182a", shape: "ram", behavior: "charger" },
+  bulwark: { name: "Gloom Bulwark", radius: 25, hp: 92, speed: 39, damage: 18, xp: 13, color: "#c18bff", body: "#3f2069", shape: "shieldHex", behavior: "tank" },
+  sporeling: { name: "Spore Lurker", radius: 20, hp: 68, speed: 49, damage: 15, xp: 12, color: "#adff6e", body: "#315f17", shape: "mushroom", behavior: "zigzag" },
+  glasswing: { name: "Glasswing", radius: 12, hp: 10, speed: 158, damage: 5, xp: 4, color: "#d8fbff", body: "#235a64", shape: "butterfly", behavior: "zigzag" },
+  embermite: { name: "Ember Mite", radius: 14, hp: 24, speed: 92, damage: 9, xp: 6, color: "#ffbf70", body: "#6a3515", shape: "mite", behavior: "orbiter" },
+  obsidianCrawler: { name: "Obsidian Crawler", radius: 23, hp: 82, speed: 48, damage: 17, xp: 12, color: "#7f8cff", body: "#171c4f", shape: "crawler", behavior: "tank" },
+  phaseShade: { name: "Phase Shade", radius: 16, hp: 44, speed: 105, damage: 14, xp: 9, color: "#bd78ff", body: "#351764", shape: "ghost", behavior: "orbiter" },
+  thornBeast: { name: "Thorn Beast", radius: 19, hp: 58, speed: 70, damage: 16, xp: 10, color: "#66ff95", body: "#194d28", shape: "thornBall", behavior: "direct" },
+  splitter: { name: "Rift Splitter", radius: 22, hp: 74, speed: 53, damage: 17, xp: 13, color: "#ff77bd", body: "#5f1742", shape: "cracked", behavior: "charger", splitOnDeath: "glasswing" },
+
+  orbWeaver: { name: "Orb Weaver", radius: 18, hp: 52, speed: 77, damage: 13, xp: 9, color: "#ffc46b", body: "#5c3514", shape: "spider", behavior: "zigzag" },
+  lanternEye: { name: "Lantern Eye", radius: 17, hp: 42, speed: 66, damage: 15, xp: 9, color: "#ffed8a", body: "#554611", shape: "eyeLantern", behavior: "orbiter" },
+  razorFan: { name: "Razor Fan", radius: 16, hp: 36, speed: 112, damage: 12, xp: 8, color: "#a3c6ff", body: "#1f3765", shape: "fan", behavior: "zigzag" },
+  magmaCrawler: { name: "Magma Shell", radius: 24, hp: 118, speed: 34, damage: 21, xp: 15, color: "#ff784d", body: "#5b1c12", shape: "turtle", behavior: "tank" },
+  voidMaw: { name: "Void Maw", radius: 22, hp: 72, speed: 72, damage: 18, xp: 13, color: "#d17cff", body: "#2a164c", shape: "maw", behavior: "charger" },
+
+  elite: { name: "Void Herald", radius: 31, hp: 245, speed: 52, damage: 26, xp: 38, color: "#ffdb65", body: "#695217", shape: "herald", behavior: "orbiter", tier: "elite" },
+  elite2: { name: "Iron Prophet", radius: 34, hp: 310, speed: 44, damage: 29, xp: 46, color: "#8cffd5", body: "#19584a", shape: "prophet", behavior: "tank", tier: "elite" },
+  elite3: { name: "Mirror Knight", radius: 33, hp: 285, speed: 62, damage: 27, xp: 44, color: "#b7c8ff", body: "#26305f", shape: "knight", behavior: "charger", tier: "elite" },
+
+  miniBoss: { name: "Rift Captain", radius: 45, hp: 780, speed: 45, damage: 31, xp: 95, color: "#ff8df3", body: "#6a1d61", shape: "captain", behavior: "charger", tier: "miniBoss" },
+  miniBoss2: { name: "Crystal Warden", radius: 48, hp: 920, speed: 38, damage: 34, xp: 115, color: "#8df5ff", body: "#174d5d", shape: "warden", behavior: "tank", tier: "miniBoss" },
+  miniBoss3: { name: "Blood Comet", radius: 42, hp: 700, speed: 58, damage: 36, xp: 105, color: "#ff6478", body: "#65151f", shape: "comet", behavior: "charger", tier: "miniBoss" },
+  miniBoss4: { name: "Mire Queen", radius: 50, hp: 980, speed: 34, damage: 32, xp: 120, color: "#a7ff72", body: "#315c18", shape: "queen", behavior: "orbiter", tier: "miniBoss" },
+  miniBoss5: { name: "Gear Ogre", radius: 52, hp: 1120, speed: 31, damage: 38, xp: 130, color: "#ffca7a", body: "#5d3a18", shape: "ogre", behavior: "tank", tier: "miniBoss" },
+
+  boss: { name: "Eclipse Behemoth", radius: 72, hp: 2500, speed: 32, damage: 44, xp: 260, color: "#ffcf5a", body: "#6e3f12", shape: "behemoth", behavior: "tank", tier: "boss" },
+  boss2: { name: "Astral Leviathan", radius: 66, hp: 2200, speed: 43, damage: 41, xp: 285, color: "#9d8cff", body: "#261a62", shape: "leviathan", behavior: "orbiter", tier: "boss" },
+  boss3: { name: "Sunken Archon", radius: 78, hp: 3100, speed: 28, damage: 52, xp: 330, color: "#6effb6", body: "#174f35", shape: "archon", behavior: "tank", tier: "boss" },
+  boss4: { name: "Clockwork Titan", radius: 74, hp: 2800, speed: 35, damage: 48, xp: 310, color: "#ffb36e", body: "#5b3316", shape: "titan", behavior: "charger", tier: "boss" },
+  boss5: { name: "Nebula Hydra", radius: 70, hp: 2650, speed: 39, damage: 45, xp: 325, color: "#78e6ff", body: "#173c5a", shape: "hydra", behavior: "orbiter", tier: "boss" },
+};
+
+function drawPoly(ctx, points) {
+  ctx.beginPath();
+  for (let i = 0; i < points.length; i++) {
+    const [x, y] = points[i];
+    if (i === 0) ctx.moveTo(x, y); else ctx.lineTo(x, y);
+  }
+  ctx.closePath();
+  ctx.fill(); ctx.stroke();
+}
+
+function drawRegular(ctx, sides, radius, rot = 0, inner = null) {
+  ctx.beginPath();
+  const count = inner ? sides * 2 : sides;
+  for (let i = 0; i < count; i++) {
+    const a = rot + i / count * TAU;
+    const r = inner && i % 2 ? inner : radius;
+    const x = Math.cos(a) * r;
+    const y = Math.sin(a) * r;
+    if (i === 0) ctx.moveTo(x, y); else ctx.lineTo(x, y);
+  }
+  ctx.closePath(); ctx.fill(); ctx.stroke();
+}
+
+function drawEnemyEye(ctx, r, color = "#fff") {
+  ctx.fillStyle = color;
+  ctx.beginPath(); ctx.ellipse(r * .28, 0, r * .18, r * .28, 0, 0, TAU); ctx.fill();
+  ctx.fillStyle = "rgba(0,0,0,.55)";
+  ctx.beginPath(); ctx.arc(r * .31, 0, r * .07, 0, TAU); ctx.fill();
+}
+
+function drawEnemySilhouette(ctx, enemy, cfg) {
+  const r = enemy.radius;
+  const wob = Math.sin(enemy.wobble * 2) * .08;
+  ctx.fillStyle = enemy.flash > 0 ? "#ffffff" : cfg.body;
+  ctx.strokeStyle = cfg.color;
+  ctx.lineWidth = cfg.tier === "boss" ? 5 : cfg.tier ? 4 : 2.6;
+  ctx.lineJoin = "round";
+  ctx.lineCap = "round";
+
+  switch (cfg.shape) {
+    case "wispArrow":
+      drawPoly(ctx, [[r*1.45,0],[-r*.2,-r*.75],[-r*.62,-r*.28],[-r*1.12,-r*.72],[-r*.84,0],[-r*1.12,r*.72],[-r*.62,r*.28],[-r*.2,r*.75]]);
+      drawEnemyEye(ctx, r, cfg.color); break;
+    case "needle":
+      drawPoly(ctx, [[r*1.8,0],[r*.25,-r*.55],[-r*1.45,-r*.28],[-r*.8,0],[-r*1.45,r*.28],[r*.25,r*.55]]);
+      ctx.beginPath(); ctx.moveTo(-r*.2, -r*.42); ctx.lineTo(r*.95,0); ctx.lineTo(-r*.2,r*.42); ctx.stroke(); break;
+    case "ashBlob":
+      ctx.beginPath();
+      for (let i=0;i<15;i++){ const a=i/15*TAU; const rr=r*(.86+Math.sin(enemy.wobble+i*1.7)*.11); const x=Math.cos(a)*rr; const y=Math.sin(a)*rr; i?ctx.lineTo(x,y):ctx.moveTo(x,y); }
+      ctx.closePath(); ctx.fill(); ctx.stroke(); drawEnemyEye(ctx, r*.9, cfg.color); break;
+    case "crescent":
+      ctx.beginPath(); ctx.arc(0,0,r*1.05,-1.18,1.18); ctx.quadraticCurveTo(-r*.55,0,0,-r*1.05); ctx.closePath(); ctx.fill(); ctx.stroke();
+      ctx.beginPath(); ctx.moveTo(-r*.3,-r*.68); ctx.lineTo(-r*1.1,0); ctx.lineTo(-r*.3,r*.68); ctx.stroke(); break;
+    case "ram":
+      ctx.beginPath(); ctx.ellipse(0,0,r*1.05,r*.82,0,0,TAU); ctx.fill(); ctx.stroke();
+      for(const s of [-1,1]) { ctx.beginPath(); ctx.moveTo(r*.55,s*r*.55); ctx.quadraticCurveTo(r*1.35,s*r*.98,r*1.62,s*r*.2); ctx.lineTo(r*.78,s*r*.12); ctx.closePath(); ctx.fill(); ctx.stroke(); }
+      drawEnemyEye(ctx, r*.9, "#fff0f0"); break;
+    case "shieldHex":
+      drawRegular(ctx, 6, r*1.08, Math.PI/6); ctx.strokeStyle="rgba(255,255,255,.32)"; ctx.lineWidth=1.8; drawRegular(ctx, 6, r*.62, Math.PI/6); break;
+    case "mushroom":
+      ctx.beginPath(); ctx.ellipse(0,-r*.22,r*1.16,r*.72,0,Math.PI,TAU); ctx.lineTo(r*.42,r*.62); ctx.quadraticCurveTo(0,r*.92,-r*.42,r*.62); ctx.closePath(); ctx.fill(); ctx.stroke();
+      ctx.fillStyle=cfg.color; for(let i=-1;i<=1;i++){ctx.beginPath();ctx.arc(i*r*.35,-r*.33,r*.08,0,TAU);ctx.fill();} break;
+    case "butterfly":
+      for(const s of [-1,1]) { ctx.beginPath(); ctx.ellipse(-r*.18,s*r*.55,r*.72,r*.42, s*.38,0,TAU); ctx.fill(); ctx.stroke(); ctx.beginPath(); ctx.ellipse(r*.42,s*r*.45,r*.55,r*.32,-s*.3,0,TAU); ctx.fill(); ctx.stroke(); }
+      ctx.beginPath(); ctx.ellipse(0,0,r*.28,r*.9,0,0,TAU); ctx.fill(); ctx.stroke(); break;
+    case "mite":
+      for(const s of [-1,1]) for(let i=0;i<3;i++){ ctx.beginPath(); ctx.moveTo(-r*.4+i*r*.28,s*r*.45); ctx.lineTo(-r*.95+i*r*.18,s*(r*.85+i*r*.08)); ctx.stroke(); }
+      ctx.beginPath(); ctx.ellipse(0,0,r*.95,r*.72,0,0,TAU); ctx.fill(); ctx.stroke(); drawEnemyEye(ctx,r*.8,"#fff6d8"); break;
+    case "crawler":
+      for(const s of [-1,1]) for(let i=0;i<4;i++){ ctx.beginPath(); ctx.moveTo(-r*.75+i*r*.45,s*r*.45); ctx.lineTo(-r*1.25+i*r*.42,s*r*.88); ctx.stroke(); }
+      ctx.beginPath(); ctx.ellipse(0,0,r*1.15,r*.62,0,0,TAU); ctx.fill(); ctx.stroke();
+      ctx.beginPath(); ctx.moveTo(r*.8,-r*.42); ctx.lineTo(r*1.28,0); ctx.lineTo(r*.8,r*.42); ctx.stroke(); break;
+    case "ghost":
+      ctx.beginPath(); ctx.moveTo(r*.92,0); ctx.bezierCurveTo(r*.38,-r*1.05,-r*.95,-r*.85,-r*.92,r*.05); ctx.quadraticCurveTo(-r*.82,r*.8,-r*.35,r*.55); ctx.quadraticCurveTo(0,r*.9,r*.35,r*.55); ctx.quadraticCurveTo(r*.75,r*.34,r*.92,0); ctx.closePath(); ctx.fill(); ctx.stroke(); drawEnemyEye(ctx,r,"#fff"); break;
+    case "thornBall":
+      drawRegular(ctx, 12, r*1.22, enemy.wobble*.35, r*.66); drawEnemyEye(ctx,r*.8,cfg.color); break;
+    case "cracked":
+      drawRegular(ctx, 8, r*1.06, Math.PI/8, r*.78); ctx.strokeStyle="rgba(255,255,255,.5)"; ctx.lineWidth=2; ctx.beginPath(); ctx.moveTo(-r*.2,-r*.9); ctx.lineTo(r*.08,-r*.2); ctx.lineTo(-r*.1,r*.2); ctx.lineTo(r*.25,r*.9); ctx.stroke(); break;
+    case "spider":
+      for(const s of [-1,1]) for(let i=0;i<4;i++){ ctx.beginPath(); ctx.moveTo(-r*.55+i*r*.34,s*r*.38); ctx.lineTo(-r*1.25+i*r*.22,s*(r*.72+i*.06*r)); ctx.stroke(); }
+      ctx.beginPath(); ctx.ellipse(-r*.2,0,r*.62,r*.55,0,0,TAU); ctx.fill(); ctx.stroke(); ctx.beginPath(); ctx.ellipse(r*.48,0,r*.55,r*.45,0,0,TAU); ctx.fill(); ctx.stroke(); break;
+    case "eyeLantern":
+      drawPoly(ctx, [[0,-r*1.25],[r*.85,-r*.45],[r*.72,r*.75],[0,r*1.15],[-r*.72,r*.75],[-r*.85,-r*.45]]); drawEnemyEye(ctx,r*1.15,"#fff7c9");
+      ctx.beginPath(); ctx.arc(0,-r*1.32,r*.22,0,TAU); ctx.stroke(); break;
+    case "fan":
+      for(let i=0;i<5;i++){ const a=(-.9+i*.45); ctx.beginPath(); ctx.moveTo(0,0); ctx.arc(0,0,r*1.25,a,a+.26); ctx.closePath(); ctx.fill(); ctx.stroke(); }
+      ctx.beginPath(); ctx.arc(0,0,r*.38,0,TAU); ctx.fill(); ctx.stroke(); break;
+    case "turtle":
+      ctx.beginPath(); ctx.ellipse(0,0,r*1.14,r*.78,0,0,TAU); ctx.fill(); ctx.stroke();
+      ctx.strokeStyle="rgba(255,255,255,.32)"; ctx.lineWidth=2; ctx.beginPath(); ctx.moveTo(-r*.65,0); ctx.lineTo(r*.65,0); ctx.moveTo(-r*.25,-r*.65); ctx.lineTo(-r*.25,r*.65); ctx.moveTo(r*.25,-r*.65); ctx.lineTo(r*.25,r*.65); ctx.stroke();
+      ctx.strokeStyle=cfg.color; ctx.lineWidth=2.6; ctx.beginPath(); ctx.arc(r*1.02,0,r*.28,0,TAU); ctx.fill(); ctx.stroke(); break;
+    case "maw":
+      drawRegular(ctx, 10, r*1.08, 0, r*.68); ctx.fillStyle="rgba(0,0,0,.55)"; ctx.beginPath(); ctx.ellipse(r*.2,0,r*.55,r*.32,0,0,TAU); ctx.fill(); ctx.strokeStyle=cfg.color; ctx.lineWidth=1.8; for(let i=0;i<5;i++){ctx.beginPath();ctx.moveTo(-r*.1+i*r*.14,-r*.25);ctx.lineTo(-r*.02+i*r*.14,0);ctx.lineTo(-r*.1+i*r*.14,r*.25);ctx.stroke();} break;
+    case "herald":
+      drawPoly(ctx, [[r*1.1,0],[r*.35,-r*1.15],[-r*.75,-r*.85],[-r*1.2,0],[-r*.75,r*.85],[r*.35,r*1.15]]); ctx.strokeStyle="rgba(255,255,255,.45)"; ctx.lineWidth=2; ctx.beginPath(); ctx.moveTo(-r*.5,0); ctx.lineTo(r*.65,0); ctx.moveTo(r*.15,-r*.65); ctx.lineTo(r*.15,r*.65); ctx.stroke(); break;
+    case "prophet":
+      drawPoly(ctx, [[r*.95,-r*.9],[r*1.15,r*.75],[-r*.75,r*1.05],[-r*1.05,-r*.65]]); ctx.strokeStyle="rgba(255,255,255,.36)"; ctx.lineWidth=2; for(let i=-1;i<=1;i++){ctx.beginPath();ctx.moveTo(-r*.55,i*r*.28);ctx.lineTo(r*.65,i*r*.18);ctx.stroke();} break;
+    case "knight":
+      drawPoly(ctx, [[r*1.2,0],[r*.55,-r*.9],[-r*.5,-r*.82],[-r*1.05,0],[-r*.5,r*.82],[r*.55,r*.9]]); ctx.strokeStyle="rgba(255,255,255,.4)"; ctx.beginPath(); ctx.moveTo(r*.2,-r*.72); ctx.lineTo(r*.2,r*.72); ctx.stroke(); drawEnemyEye(ctx,r*.85,"#fff"); break;
+    case "captain":
+      drawRegular(ctx, 12, r*1.05, enemy.wobble*.2, r*.74); ctx.strokeStyle="rgba(255,255,255,.35)"; ctx.lineWidth=2; ctx.beginPath(); ctx.arc(0,0,r*1.28,0,TAU); ctx.stroke(); drawEnemyEye(ctx,r*.9,cfg.color); break;
+    case "warden":
+      drawRegular(ctx, 8, r*1.02, Math.PI/8); ctx.strokeStyle="rgba(255,255,255,.4)"; ctx.lineWidth=2.4; drawRegular(ctx,4,r*.55,Math.PI/4); break;
+    case "comet":
+      drawPoly(ctx, [[r*1.35,0],[r*.3,-r*.85],[-r*.7,-r*.6],[-r*1.7,-r*1.2],[-r*1.1,0],[-r*1.7,r*1.2],[-r*.7,r*.6],[r*.3,r*.85]]); break;
+    case "queen":
+      drawRegular(ctx, 14, r*1.08, -Math.PI/2, r*.72); ctx.fillStyle=cfg.color; for(let i=-1;i<=1;i++){ctx.beginPath();ctx.arc(r*.25,i*r*.36,r*.09,0,TAU);ctx.fill();} break;
+    case "ogre":
+      ctx.beginPath(); ctx.roundRect ? ctx.roundRect(-r*.85,-r*.7,r*1.65,r*1.4,10) : ctx.rect(-r*.85,-r*.7,r*1.65,r*1.4); ctx.fill(); ctx.stroke(); for(const s of [-1,1]){ctx.beginPath();ctx.moveTo(r*.7,s*r*.45);ctx.lineTo(r*1.28,s*r*.75);ctx.stroke();} break;
+    case "behemoth":
+      drawRegular(ctx, 16, r*1.1, enemy.wobble*.12, r*.82); ctx.strokeStyle="rgba(255,255,255,.36)"; ctx.lineWidth=2.5; ctx.beginPath(); ctx.arc(0,0,r*.58,0,TAU); ctx.stroke(); break;
+    case "leviathan":
+      for(let i=0;i<5;i++){ ctx.beginPath(); ctx.ellipse(-r*.72+i*r*.42, Math.sin(enemy.wobble+i)*r*.13, r*.36, r*.24, 0, 0, TAU); ctx.fill(); ctx.stroke(); }
+      ctx.beginPath(); ctx.moveTo(r*1.35,0); ctx.lineTo(r*.75,-r*.38); ctx.lineTo(r*.75,r*.38); ctx.closePath(); ctx.fill(); ctx.stroke(); break;
+    case "archon":
+      drawRegular(ctx, 7, r*1.06, -Math.PI/2); ctx.strokeStyle="rgba(255,255,255,.42)"; ctx.lineWidth=2.4; ctx.beginPath(); ctx.arc(0,0,r*.76,0,TAU); ctx.stroke(); ctx.beginPath(); ctx.moveTo(0,-r*1.25); ctx.lineTo(0,r*1.25); ctx.stroke(); break;
+    case "titan":
+      drawRegular(ctx, 10, r*1.02, enemy.wobble*.18); ctx.strokeStyle="rgba(255,255,255,.38)"; ctx.lineWidth=2.5; for(let i=0;i<6;i++){const a=i/6*TAU+enemy.wobble*.3;ctx.beginPath();ctx.moveTo(Math.cos(a)*r*.45,Math.sin(a)*r*.45);ctx.lineTo(Math.cos(a)*r*.92,Math.sin(a)*r*.92);ctx.stroke();} break;
+    case "hydra":
+      ctx.beginPath(); ctx.ellipse(0,0,r*.82,r*.66,0,0,TAU); ctx.fill(); ctx.stroke(); for(const s of [-1,0,1]){ctx.beginPath();ctx.moveTo(r*.42,s*r*.18);ctx.quadraticCurveTo(r*1.05,s*r*.75,r*1.25,s*r*.35);ctx.stroke();ctx.beginPath();ctx.arc(r*1.28,s*r*.38,r*.16,0,TAU);ctx.fill();ctx.stroke();} break;
+    default:
+      drawRegular(ctx, 12, r, 0, r * .76); drawEnemyEye(ctx, r, cfg.color);
+  }
+}
+
+class Enemy {
+  constructor(typeKey, x, y, difficulty) {
+    this.typeKey = typeKey;
+    this.config = ENEMY_TYPES[typeKey];
+    this.x = x;
+    this.y = y;
+    this.radius = this.config.radius;
+    const tierBonus = this.config.tier === "boss" ? 1 + difficulty * 0.36 : this.config.tier === "miniBoss" ? 1 + difficulty * 0.28 : 1 + difficulty * 0.22;
+    this.maxHp = Math.floor(this.config.hp * tierBonus);
+    this.hp = this.maxHp;
+    this.speed = this.config.speed * (1 + difficulty * 0.045);
+    this.damage = this.config.damage * (1 + difficulty * 0.05);
+    this.xpValue = Math.ceil(this.config.xp * (1 + difficulty * 0.08));
+    this.attackCooldown = rand(0, 0.3);
+    this.flash = 0;
+    this.dead = false;
+    this.angle = Math.random() * TAU;
+    this.wobble = Math.random() * TAU;
+    this.hitTimers = new Map();
+    this.slowTimer = 0;
+    this.slowMult = 1;
+    this.chargeTimer = rand(1.2, 2.4);
+    this.chargeWindow = 0;
+  }
+
+  update(dt, game) {
+    if (this.dead) return;
+    this.flash = Math.max(0, this.flash - dt * 9);
+    this.attackCooldown = Math.max(0, this.attackCooldown - dt);
+    this.slowTimer = Math.max(0, this.slowTimer - dt);
+    if (this.slowTimer <= 0) this.slowMult = 1;
+    this.wobble += dt * 3;
+
+    const player = game.player;
+    const dx = player.x - this.x;
+    const dy = player.y - this.y;
+    const d = Math.sqrt(dx * dx + dy * dy) || 1;
+    let nx = dx / d;
+    let ny = dy / d;
+    let speed = this.speed * (this.slowTimer > 0 ? this.slowMult : 1);
+
+    if (this.config.behavior === "zigzag") {
+      nx += Math.cos(this.wobble * 1.8) * 0.34;
+      ny += Math.sin(this.wobble * 1.5) * 0.34;
+    } else if (this.config.behavior === "orbiter") {
+      const tx = -ny;
+      const ty = nx;
+      nx = nx * 0.78 + tx * 0.38;
+      ny = ny * 0.78 + ty * 0.38;
+    } else if (this.config.behavior === "charger") {
+      this.chargeTimer -= dt;
+      if (this.chargeTimer <= 0) {
+        this.chargeWindow = 0.42;
+        this.chargeTimer = rand(2.1, 3.6);
+      }
+      if (this.chargeWindow > 0) {
+        this.chargeWindow -= dt;
+        speed *= 2.15;
+      }
+    } else if (this.config.behavior === "tank") {
+      nx += Math.cos(this.wobble) * 0.12;
+      ny += Math.sin(this.wobble * 0.8) * 0.12;
+    }
+
+    const n = Math.sqrt(nx * nx + ny * ny) || 1;
+    this.x += (nx / n) * speed * dt;
+    this.y += (ny / n) * speed * dt;
+    this.angle = Math.atan2(dy, dx);
+
+    if (circleHit(this, player) && this.attackCooldown <= 0) {
+      player.takeDamage(this.damage);
+      this.attackCooldown = this.config.tier ? 0.76 : 0.58;
+    }
+
+    for (const [key, value] of this.hitTimers) {
+      const next = value - dt;
+      if (next <= 0) this.hitTimers.delete(key);
+      else this.hitTimers.set(key, next);
+    }
+  }
+
+  applySlow(mult, duration) {
+    this.slowMult = Math.min(this.slowMult, mult);
+    this.slowTimer = Math.max(this.slowTimer, duration);
+  }
+
+  canBeHitBy(key, cooldown) {
+    if (this.hitTimers.has(key)) return false;
+    this.hitTimers.set(key, cooldown);
+    return true;
+  }
+
+  takeDamage(amount, game, color = "#ffffff") {
+    if (this.dead) return;
+    this.hp -= amount;
+    this.flash = 1;
+    game.totalDamage += amount;
+    if (Math.random() < 0.42) {
+      game.spawnParticles(this.x + rand(-this.radius, this.radius), this.y + rand(-this.radius, this.radius), 1, color, 0.22, 1.5);
+    }
+    if (this.hp <= 0) this.kill(game);
+  }
+
+  kill(game) {
+    if (this.dead) return;
+    this.dead = true;
+    game.kills += 1;
+    if (game.player.lifeOnKill > 0) game.player.heal(game.player.lifeOnKill);
+    if (this.config.splitOnDeath && !this.config.tier && game.enemies.length < game.maxEnemies - 3) {
+      for (let i = 0; i < 3; i++) {
+        const a = Math.random() * TAU;
+        game.enemies.push(new Enemy(this.config.splitOnDeath, this.x + Math.cos(a) * this.radius, this.y + Math.sin(a) * this.radius, game.elapsed / 80));
+      }
+    }
+    const orbCount = this.config.tier === "boss" ? 9 : this.config.tier === "miniBoss" ? 5 : this.config.tier === "elite" ? 2 : 1;
+    for (let i = 0; i < orbCount; i++) {
+      const angle = Math.random() * TAU;
+      const spread = rand(0, this.radius * 0.9);
+      game.orbs.push(new ExperienceOrb(this.x + Math.cos(angle) * spread, this.y + Math.sin(angle) * spread, Math.ceil(this.xpValue / orbCount)));
+    }
+    const particles = this.config.tier === "boss" ? 95 : this.config.tier === "miniBoss" ? 60 : this.config.tier === "elite" ? 42 : 18;
+    game.spawnParticles(this.x, this.y, particles, this.config.color, 0.8, this.config.tier ? 4.2 : 3.2);
+    game.camera.addShake(this.config.tier === "boss" ? 4.4 : this.config.tier === "miniBoss" ? 2.8 : this.config.tier === "elite" ? 1.8 : 0.55);
+    if (this.config.tier === "boss") game.showNotice("БОСС УНИЧТОЖЕН · мощный дроп опыта", "boss");
+    if (this.config.tier === "miniBoss") game.showNotice("МИНИ-БОСС ПОВЕРЖЕН", "mini");
+  }
+
+  draw(ctx) {
+    if (this.dead) return;
+    const cfg = this.config;
+    ctx.save();
+    ctx.translate(this.x, this.y);
+    ctx.rotate(this.angle);
+    if (cfg.tier) {
+      ctx.shadowBlur = 26;
+      ctx.shadowColor = cfg.color;
+    }
+    drawEnemySilhouette(ctx, this, cfg);
+    ctx.restore();
+    this.drawHealthBar(ctx);
+  }
+
+  drawHealthBar(ctx) {
+    if (this.hp >= this.maxHp && !this.config.tier) return;
+    const width = this.radius * (this.config.tier ? 3.1 : 2.2);
+    const height = this.config.tier ? 8 : 5;
+    const x = this.x - width / 2;
+    const y = this.y - this.radius - (this.config.tier ? 24 : 14);
+    ctx.fillStyle = "rgba(0,0,0,.54)"; ctx.fillRect(x, y, width, height);
+    ctx.fillStyle = this.config.color;
+    ctx.fillRect(x, y, width * clamp(this.hp / this.maxHp, 0, 1), height);
+  }
+}
+
+class Weapon {
+  constructor(game, name) {
+    this.game = game;
+    this.name = name;
+    this.level = 1;
+    this.timer = 0;
+  }
+  adjustedDamage(base) { return base * this.game.player.damageMult; }
+  adjustedCooldown(base) { return Math.max(0.08, base * this.game.player.cooldownMult); }
+  update() {}
+  draw() {}
+  description() { return "активно"; }
+}
+
+class MagicBoltWeapon extends Weapon {
+  constructor(game) { super(game, "Magic Bolt"); this.baseDamage = 18; this.cooldown = .82; this.projectileCount = 1; this.projectileSpeed = 455; }
+  update(dt) {
+    this.timer -= dt; if (this.timer > 0) return;
+    const player = this.game.player;
+    const enemies = this.game.getEnemiesNear(player.x, player.y, 1050).filter((enemy) => !enemy.dead);
+    if (!enemies.length) return;
+    this.timer = this.adjustedCooldown(this.cooldown);
+    const targets = enemies.sort((a, b) => distSq(player.x, player.y, a.x, a.y) - distSq(player.x, player.y, b.x, b.y)).slice(0, this.projectileCount);
+    for (let i = 0; i < targets.length; i++) {
+      const target = targets[i]; const dx = target.x - player.x; const dy = target.y - player.y; const d = Math.sqrt(dx * dx + dy * dy) || 1;
+      const spread = (i - (targets.length - 1) / 2) * .08; const angle = Math.atan2(dy, dx) + spread; const speed = this.projectileSpeed * player.projectileSpeedMult;
+      this.game.projectiles.push(new Projectile(player.x + Math.cos(angle) * 22, player.y + Math.sin(angle) * 22, Math.cos(angle) * speed, Math.sin(angle) * speed, this.adjustedDamage(this.baseDamage), 6.5, 2.25, { color: "#83f7ff", hitColor: "#7bf5ff" }));
+      this.game.spawnParticles(player.x, player.y, 3, "#83f7ff", .18, 1.4);
+    }
+  }
+  description() { return `снарядов ${this.projectileCount}, урон ${Math.round(this.adjustedDamage(this.baseDamage))}`; }
+}
+
+class OrbitBladeWeapon extends Weapon {
+  constructor(game) { super(game, "Orbit Blades"); this.count = 2; this.radius = 70; this.bladeRadius = 13; this.damage = 18; this.speed = 2.8; this.angle = 0; }
+  update(dt) {
+    this.angle += dt * this.speed; const player = this.game.player; const orbitRadius = this.radius * player.zoneSizeMult;
+    for (let i = 0; i < this.count; i++) {
+      const angle = this.angle + (i / this.count) * TAU; const blade = { x: player.x + Math.cos(angle) * orbitRadius, y: player.y + Math.sin(angle) * orbitRadius, radius: this.bladeRadius };
+      const nearby = this.game.getEnemiesNear(blade.x, blade.y, this.bladeRadius + 35);
+      for (const enemy of nearby) if (!enemy.dead && circleHit(blade, enemy) && enemy.canBeHitBy(`orbit-${i}`, .42)) { enemy.takeDamage(this.adjustedDamage(this.damage), this.game, "#d2b2ff"); this.game.spawnParticles(blade.x, blade.y, 5, "#d2b2ff", .25, 2); }
+    }
+  }
+  draw(ctx) {
+    const player = this.game.player; const orbitRadius = this.radius * player.zoneSizeMult;
+    ctx.save(); ctx.strokeStyle = "rgba(183,133,255,.16)"; ctx.lineWidth = 2; ctx.beginPath(); ctx.arc(player.x, player.y, orbitRadius, 0, TAU); ctx.stroke();
+    for (let i = 0; i < this.count; i++) { const angle = this.angle + (i / this.count) * TAU; const x = player.x + Math.cos(angle) * orbitRadius; const y = player.y + Math.sin(angle) * orbitRadius; ctx.save(); ctx.translate(x, y); ctx.rotate(angle + Math.PI / 2); ctx.shadowBlur = 20; ctx.shadowColor = "#d2b2ff"; ctx.fillStyle = "#d8b8ff"; ctx.strokeStyle = "#ffffff"; ctx.lineWidth = 1.3; ctx.beginPath(); ctx.moveTo(0, -20); ctx.lineTo(9, 0); ctx.lineTo(0, 20); ctx.lineTo(-9, 0); ctx.closePath(); ctx.fill(); ctx.stroke(); ctx.restore(); }
+    ctx.restore();
+  }
+  description() { return `клинков ${this.count}, радиус ${Math.round(this.radius * this.game.player.zoneSizeMult)}`; }
+}
+
+class FireZone {
+  constructor(x, y, radius, damage, duration, color = "#ff8a4f") { this.x = x; this.y = y; this.radius = radius; this.damage = damage; this.duration = duration; this.life = duration; this.phase = Math.random() * TAU; this.tick = 0; this.color = color; }
+  update(dt, game) {
+    this.life -= dt; this.phase += dt * 8; this.tick -= dt;
+    if (this.tick <= 0) { this.tick = .18; const nearby = game.getEnemiesNear(this.x, this.y, this.radius + 40); for (const enemy of nearby) { if (enemy.dead) continue; if (distSq(this.x, this.y, enemy.x, enemy.y) <= (this.radius + enemy.radius) ** 2) enemy.takeDamage(this.damage * .18, game, this.color); }
+      if (game.particles.length < game.maxParticles - 4) for (let i = 0; i < 3; i++) { const a = Math.random() * TAU; const r = Math.sqrt(Math.random()) * this.radius; game.particles.push(new Particle(this.x + Math.cos(a) * r, this.y + Math.sin(a) * r, { vx: rand(-20, 20), vy: rand(-60, -10), radius: rand(2, 5), life: rand(.25, .55), color: Math.random() < .5 ? this.color : "#ffd16b", drag: 1.8, grow: 1.5 })); }
+    }
+  }
+  draw(ctx) { const alpha = clamp(this.life / this.duration, 0, 1); const pulse = 1 + Math.sin(this.phase) * .08; ctx.save(); ctx.globalAlpha = alpha; ctx.shadowBlur = 28; ctx.shadowColor = this.color; const g = ctx.createRadialGradient(this.x, this.y, 0, this.x, this.y, this.radius * pulse); g.addColorStop(0, "rgba(255,215,112,.22)"); g.addColorStop(.48, "rgba(255,116,70,.18)"); g.addColorStop(1, "rgba(255,79,79,0)"); ctx.fillStyle = g; ctx.beginPath(); ctx.arc(this.x, this.y, this.radius * pulse, 0, TAU); ctx.fill(); ctx.globalAlpha = alpha * .75; ctx.strokeStyle = this.color; ctx.lineWidth = 2; ctx.beginPath(); ctx.arc(this.x, this.y, this.radius * pulse, 0, TAU); ctx.stroke(); ctx.restore(); }
+  get dead() { return this.life <= 0; }
+}
+
+class FireZoneWeapon extends Weapon {
+  constructor(game) { super(game, "Fire Zone"); this.cooldown = 4.6; this.radius = 76; this.damage = 44; this.duration = 3.4; this.zones = 1; }
+  update(dt) { this.timer -= dt; if (this.timer > 0) return; const player = this.game.player; this.timer = this.adjustedCooldown(this.cooldown); for (let i = 0; i < this.zones; i++) { const angle = Math.random() * TAU; const distance = rand(30, 150); const zone = new FireZone(player.x + Math.cos(angle) * distance, player.y + Math.sin(angle) * distance, this.radius * player.zoneSizeMult, this.adjustedDamage(this.damage), this.duration); this.game.fireZones.push(zone); this.game.spawnParticles(zone.x, zone.y, 18, "#ff8a4f", .7, 3); } }
+  description() { return `зон ${this.zones}, урон/сек ${Math.round(this.adjustedDamage(this.damage))}`; }
+}
+
+class ShockWave {
+  constructor(x, y, maxRadius, damage, speed) { this.x = x; this.y = y; this.radius = 8; this.maxRadius = maxRadius; this.damage = damage; this.speed = speed; this.thickness = 20; this.hit = new Set(); }
+  update(dt, game) { this.radius += this.speed * dt; const nearby = game.getEnemiesNear(this.x, this.y, this.radius + this.thickness + 50); for (const enemy of nearby) { if (enemy.dead || this.hit.has(enemy)) continue; const ex = enemy.x - this.x; const ey = enemy.y - this.y; const d = Math.sqrt(ex * ex + ey * ey); if (d <= this.radius + this.thickness && d >= this.radius - this.thickness - enemy.radius) { this.hit.add(enemy); enemy.takeDamage(this.damage, game, "#a9f8ff"); const inv = 1 / (d || 1); enemy.x += ex * inv * 18; enemy.y += ey * inv * 18; } } }
+  draw(ctx) { const alpha = 1 - this.radius / this.maxRadius; ctx.save(); ctx.globalAlpha = clamp(alpha, 0, 1); ctx.shadowBlur = 25; ctx.shadowColor = "#a9f8ff"; ctx.strokeStyle = "#a9f8ff"; ctx.lineWidth = this.thickness; ctx.beginPath(); ctx.arc(this.x, this.y, this.radius, 0, TAU); ctx.stroke(); ctx.globalAlpha = clamp(alpha * .35, 0, 1); ctx.lineWidth = 3; ctx.strokeStyle = "#ffffff"; ctx.beginPath(); ctx.arc(this.x, this.y, this.radius + this.thickness * .6, 0, TAU); ctx.stroke(); ctx.restore(); }
+  get dead() { return this.radius >= this.maxRadius; }
+}
+
+class ShockNovaWeapon extends Weapon {
+  constructor(game) { super(game, "Shock Nova"); this.cooldown = 6.2; this.maxRadius = 260; this.damage = 42; this.speed = 520; this.waves = 1; }
+  update(dt) { this.timer -= dt; if (this.timer > 0) return; const player = this.game.player; this.timer = this.adjustedCooldown(this.cooldown); for (let i = 0; i < this.waves; i++) { this.game.shockWaves.push(new ShockWave(player.x, player.y, this.maxRadius * player.zoneSizeMult * (1 + i * .18), this.adjustedDamage(this.damage), this.speed)); } this.game.spawnParticles(player.x, player.y, 24, "#a9f8ff", .8, 3); this.game.camera.addShake(.9); }
+  description() { return `радиус ${Math.round(this.maxRadius * this.game.player.zoneSizeMult)}, урон ${Math.round(this.adjustedDamage(this.damage))}`; }
+}
+
+class BeamEffect {
+  constructor(points, color = "#f5ff8a", life = .22, width = 4) { this.points = points; this.color = color; this.life = life; this.maxLife = life; this.width = width; }
+  update(dt) { this.life -= dt; }
+  draw(ctx) { const a = clamp(this.life / this.maxLife, 0, 1); ctx.save(); ctx.globalAlpha = a; ctx.shadowBlur = 20; ctx.shadowColor = this.color; ctx.strokeStyle = this.color; ctx.lineWidth = this.width; ctx.lineCap = "round"; ctx.lineJoin = "round"; ctx.beginPath(); this.points.forEach((p, i) => i === 0 ? ctx.moveTo(p.x, p.y) : ctx.lineTo(p.x, p.y)); ctx.stroke(); ctx.globalAlpha = a * .55; ctx.strokeStyle = "#fff"; ctx.lineWidth = Math.max(1, this.width * .35); ctx.beginPath(); this.points.forEach((p, i) => i === 0 ? ctx.moveTo(p.x, p.y) : ctx.lineTo(p.x, p.y)); ctx.stroke(); ctx.restore(); }
+  get dead() { return this.life <= 0; }
+}
+
+class FrostLanceWeapon extends Weapon {
+  constructor(game) { super(game, "Frost Lance"); this.damage = 36; this.cooldown = 2.05; this.pierce = 4; this.speed = 680; }
+  update(dt) { this.timer -= dt; if (this.timer > 0) return; const target = this.game.findClosestEnemy(this.game.player.x, this.game.player.y, 1200); if (!target) return; this.timer = this.adjustedCooldown(this.cooldown); const p = this.game.player; const a = Math.atan2(target.y - p.y, target.x - p.x); this.game.projectiles.push(new Projectile(p.x + Math.cos(a) * 24, p.y + Math.sin(a) * 24, Math.cos(a) * this.speed * p.projectileSpeedMult, Math.sin(a) * this.speed * p.projectileSpeedMult, this.adjustedDamage(this.damage), 5.5, 1.65, { color: "#bdf7ff", hitColor: "#9beeff", pierce: this.pierce, onHit: (enemy) => enemy.applySlow(.58, 1.35) })); this.game.spawnParticles(p.x, p.y, 10, "#bdf7ff", .35, 2.3); }
+  description() { return `пробитие ${this.pierce}, замедление, урон ${Math.round(this.adjustedDamage(this.damage))}`; }
+}
+
+class RuneMine {
+  constructor(x, y, radius, damage, life = 10) { this.x = x; this.y = y; this.radius = 12; this.triggerRadius = 34; this.explosionRadius = radius; this.damage = damage; this.life = life; this.arm = .35; this.exploded = false; this.explosionLife = 0; this.phase = Math.random() * TAU; }
+  update(dt, game) { this.phase += dt * 7; if (!this.exploded) { this.life -= dt; this.arm -= dt; if (this.arm <= 0) { const nearby = game.getEnemiesNear(this.x, this.y, this.triggerRadius + 50); for (const enemy of nearby) if (!enemy.dead && distSq(this.x, this.y, enemy.x, enemy.y) <= (this.triggerRadius + enemy.radius) ** 2) { this.explode(game); break; } } if (this.life <= 0) this.explode(game); } else this.explosionLife -= dt; }
+  explode(game) { if (this.exploded) return; this.exploded = true; this.explosionLife = .35; const nearby = game.getEnemiesNear(this.x, this.y, this.explosionRadius + 70); for (const enemy of nearby) if (!enemy.dead && distSq(this.x, this.y, enemy.x, enemy.y) <= (this.explosionRadius + enemy.radius) ** 2) enemy.takeDamage(this.damage, game, "#ffec8a"); game.spawnParticles(this.x, this.y, 30, "#ffec8a", .55, 4); game.camera.addShake(1.0); }
+  draw(ctx) { ctx.save(); if (!this.exploded) { const pulse = 1 + Math.sin(this.phase) * .12; ctx.globalAlpha = this.arm > 0 ? .45 : .9; ctx.shadowBlur = 18; ctx.shadowColor = "#ffec8a"; ctx.strokeStyle = "#ffec8a"; ctx.fillStyle = "rgba(255,236,138,.13)"; ctx.lineWidth = 2; ctx.beginPath(); ctx.arc(this.x, this.y, this.triggerRadius * pulse, 0, TAU); ctx.stroke(); ctx.beginPath(); ctx.arc(this.x, this.y, this.radius, 0, TAU); ctx.fill(); ctx.stroke(); } else { const t = 1 - this.explosionLife / .35; ctx.globalAlpha = clamp(1 - t, 0, 1); ctx.shadowBlur = 35; ctx.shadowColor = "#ffec8a"; ctx.strokeStyle = "#ffec8a"; ctx.lineWidth = 10 * (1 - t); ctx.beginPath(); ctx.arc(this.x, this.y, this.explosionRadius * t, 0, TAU); ctx.stroke(); } ctx.restore(); }
+  get dead() { return this.exploded && this.explosionLife <= 0; }
+}
+
+class RuneMineWeapon extends Weapon {
+  constructor(game) { super(game, "Rune Mines"); this.cooldown = 3.25; this.damage = 86; this.radius = 94; this.mineCount = 1; }
+  update(dt) { this.timer -= dt; if (this.timer > 0) return; this.timer = this.adjustedCooldown(this.cooldown); const p = this.game.player; for (let i = 0; i < this.mineCount; i++) { const a = Math.random() * TAU; const d = rand(25, 115); this.game.mines.push(new RuneMine(p.x + Math.cos(a) * d, p.y + Math.sin(a) * d, this.radius * p.zoneSizeMult, this.adjustedDamage(this.damage))); } }
+  description() { return `мин ${this.mineCount}, взрыв ${Math.round(this.radius * this.game.player.zoneSizeMult)}`; }
+}
+
+class MeteorStrike {
+  constructor(x, y, radius, damage, delay = .85) { this.x = x; this.y = y; this.radius = radius; this.damage = damage; this.delay = delay; this.impactLife = .42; this.impacted = false; this.life = delay + this.impactLife; }
+  update(dt, game) { this.life -= dt; if (!this.impacted) { this.delay -= dt; if (this.delay <= 0) { this.impacted = true; const nearby = game.getEnemiesNear(this.x, this.y, this.radius + 70); for (const enemy of nearby) if (!enemy.dead && distSq(this.x, this.y, enemy.x, enemy.y) <= (this.radius + enemy.radius) ** 2) enemy.takeDamage(this.damage, game, "#ffa45f"); game.spawnParticles(this.x, this.y, 34, "#ffa45f", .58, 4.4); game.camera.addShake(1.25); } } }
+  draw(ctx) { ctx.save(); if (!this.impacted) { const t = clamp(this.delay / .85, 0, 1); ctx.globalAlpha = .45 + (1 - t) * .35; ctx.strokeStyle = "#ffa45f"; ctx.lineWidth = 2 + (1 - t) * 3; ctx.setLineDash([8, 8]); ctx.beginPath(); ctx.arc(this.x, this.y, this.radius, 0, TAU); ctx.stroke(); ctx.setLineDash([]); ctx.shadowBlur = 22; ctx.shadowColor = "#ffa45f"; ctx.strokeStyle = "#fff1c4"; ctx.lineWidth = 5; ctx.beginPath(); ctx.moveTo(this.x - 80 * t, this.y - 170 * t); ctx.lineTo(this.x, this.y); ctx.stroke(); } else { const t = clamp(this.life / this.impactLife, 0, 1); ctx.globalAlpha = t; ctx.shadowBlur = 35; ctx.shadowColor = "#ffa45f"; ctx.fillStyle = "rgba(255,164,95,.22)"; ctx.beginPath(); ctx.arc(this.x, this.y, this.radius * (1.15 - t * .15), 0, TAU); ctx.fill(); ctx.strokeStyle = "#ffa45f"; ctx.lineWidth = 8 * t; ctx.stroke(); } ctx.restore(); }
+  get dead() { return this.life <= 0; }
+}
+
+class StarfallWeapon extends Weapon {
+  constructor(game) { super(game, "Starfall"); this.cooldown = 5.1; this.damage = 110; this.radius = 78; this.meteorCount = 2; }
+  update(dt) { this.timer -= dt; if (this.timer > 0) return; const p = this.game.player; const enemies = this.game.getEnemiesNear(p.x, p.y, 1300).filter(e => !e.dead); if (!enemies.length) return; this.timer = this.adjustedCooldown(this.cooldown); for (let i = 0; i < this.meteorCount; i++) { const target = enemies[Math.floor(Math.random() * enemies.length)]; this.game.meteors.push(new MeteorStrike(target.x + rand(-45, 45), target.y + rand(-45, 45), this.radius * this.game.player.zoneSizeMult, this.adjustedDamage(this.damage), rand(.55, .95))); } }
+  description() { return `метеоров ${this.meteorCount}, радиус ${Math.round(this.radius * this.game.player.zoneSizeMult)}`; }
+}
+
+class ChainLightningWeapon extends Weapon {
+  constructor(game) { super(game, "Chain Lightning"); this.cooldown = 2.75; this.damage = 38; this.jumps = 4; this.range = 290; }
+  update(dt) { this.timer -= dt; if (this.timer > 0) return; const first = this.game.findClosestEnemy(this.game.player.x, this.game.player.y, 850); if (!first) return; this.timer = this.adjustedCooldown(this.cooldown); const points = [{ x: this.game.player.x, y: this.game.player.y }]; const hit = new Set(); let current = first; for (let i = 0; i < this.jumps && current; i++) { hit.add(current); current.takeDamage(this.adjustedDamage(this.damage) * (1 - i * .08), this.game, "#f7ff82"); current.applySlow(.72, .45); points.push({ x: current.x, y: current.y }); let next = null; let best = Infinity; for (const enemy of this.game.getEnemiesNear(current.x, current.y, this.range)) { if (enemy.dead || hit.has(enemy)) continue; const ds = distSq(current.x, current.y, enemy.x, enemy.y); if (ds < this.range * this.range && ds < best) { best = ds; next = enemy; } } current = next; } this.game.beams.push(new BeamEffect(points, "#f7ff82", .24, 4.5)); this.game.spawnParticles(points.at(-1).x, points.at(-1).y, 14, "#f7ff82", .35, 2.7); }
+  description() { return `скачков ${this.jumps}, урон ${Math.round(this.adjustedDamage(this.damage))}`; }
+}
+
+class ArcSlash {
+  constructor(x, y, angle, range, arc, damage, color = "#ff8df3") { this.x = x; this.y = y; this.angle = angle; this.range = range; this.arc = arc; this.damage = damage; this.color = color; this.life = .28; this.maxLife = .28; this.hit = new Set(); }
+  update(dt, game) { this.life -= dt; const nearby = game.getEnemiesNear(this.x, this.y, this.range + 80); for (const enemy of nearby) { if (enemy.dead || this.hit.has(enemy)) continue; const dx = enemy.x - this.x; const dy = enemy.y - this.y; const d = Math.sqrt(dx * dx + dy * dy); if (d <= this.range + enemy.radius && Math.abs(angleDiff(Math.atan2(dy, dx), this.angle)) <= this.arc / 2) { this.hit.add(enemy); enemy.takeDamage(this.damage, game, this.color); const inv = 1 / (d || 1); enemy.x += dx * inv * 15; enemy.y += dy * inv * 15; } } }
+  draw(ctx) { const a = clamp(this.life / this.maxLife, 0, 1); ctx.save(); ctx.globalAlpha = a; ctx.shadowBlur = 25; ctx.shadowColor = this.color; ctx.strokeStyle = this.color; ctx.lineWidth = 18 * a; ctx.lineCap = "round"; ctx.beginPath(); ctx.arc(this.x, this.y, this.range * (1.05 - a * .08), this.angle - this.arc / 2, this.angle + this.arc / 2); ctx.stroke(); ctx.globalAlpha = a * .45; ctx.strokeStyle = "#fff"; ctx.lineWidth = 4; ctx.beginPath(); ctx.arc(this.x, this.y, this.range * .82, this.angle - this.arc / 2, this.angle + this.arc / 2); ctx.stroke(); ctx.restore(); }
+  get dead() { return this.life <= 0; }
+}
+
+class VoidScytheWeapon extends Weapon {
+  constructor(game) { super(game, "Void Scythe"); this.cooldown = 3.15; this.damage = 78; this.range = 150; this.arc = 1.55; this.slashes = 1; }
+  update(dt) { this.timer -= dt; if (this.timer > 0) return; const p = this.game.player; const target = this.game.findClosestEnemy(p.x, p.y, 650); if (!target) return; this.timer = this.adjustedCooldown(this.cooldown); const base = Math.atan2(target.y - p.y, target.x - p.x); for (let i = 0; i < this.slashes; i++) { const offset = (i - (this.slashes - 1) / 2) * .75; this.game.slashes.push(new ArcSlash(p.x, p.y, base + offset, this.range * p.zoneSizeMult, this.arc, this.adjustedDamage(this.damage), "#ff8df3")); } this.game.spawnParticles(p.x, p.y, 18, "#ff8df3", .38, 2.5); }
+  description() { return `дуг ${this.slashes}, дальность ${Math.round(this.range * this.game.player.zoneSizeMult)}`; }
+}
+
+class GuardianDroneWeapon extends Weapon {
+  constructor(game) { super(game, "Guardian Drone"); this.drones = 1; this.orbitRadius = 95; this.angle = 0; this.cooldown = 1.28; this.damage = 26; this.range = 520; }
+  update(dt) { this.angle += dt * 1.9; this.timer -= dt; if (this.timer > 0) return; this.timer = this.adjustedCooldown(this.cooldown); const p = this.game.player; for (let i = 0; i < this.drones; i++) { const a = this.angle + i / this.drones * TAU; const drone = { x: p.x + Math.cos(a) * this.orbitRadius, y: p.y + Math.sin(a) * this.orbitRadius }; const target = this.game.findClosestEnemy(drone.x, drone.y, this.range); if (!target) continue; target.takeDamage(this.adjustedDamage(this.damage), this.game, "#8cffd5"); this.game.beams.push(new BeamEffect([drone, { x: target.x, y: target.y }], "#8cffd5", .18, 3.5)); this.game.spawnParticles(target.x, target.y, 6, "#8cffd5", .25, 1.8); } }
+  draw(ctx) { const p = this.game.player; ctx.save(); for (let i = 0; i < this.drones; i++) { const a = this.angle + i / this.drones * TAU; const x = p.x + Math.cos(a) * this.orbitRadius; const y = p.y + Math.sin(a) * this.orbitRadius; ctx.shadowBlur = 20; ctx.shadowColor = "#8cffd5"; ctx.fillStyle = "#8cffd5"; ctx.strokeStyle = "#ffffff"; ctx.lineWidth = 1.5; ctx.beginPath(); ctx.arc(x, y, 10, 0, TAU); ctx.fill(); ctx.stroke(); ctx.fillStyle = "rgba(255,255,255,.75)"; ctx.beginPath(); ctx.arc(x + Math.cos(a) * 4, y + Math.sin(a) * 4, 3, 0, TAU); ctx.fill(); } ctx.restore(); }
+  description() { return `дронов ${this.drones}, лазер ${Math.round(this.adjustedDamage(this.damage))}`; }
+}
+
+class PoisonCloud {
+  constructor(x, y, radius, damage, duration) { this.x = x; this.y = y; this.radius = radius; this.damage = damage; this.duration = duration; this.life = duration; this.tick = 0; this.phase = Math.random() * TAU; }
+  update(dt, game) { this.life -= dt; this.phase += dt * 4; this.tick -= dt; if (this.tick <= 0) { this.tick = .25; const nearby = game.getEnemiesNear(this.x, this.y, this.radius + 60); for (const enemy of nearby) if (!enemy.dead && distSq(this.x, this.y, enemy.x, enemy.y) <= (this.radius + enemy.radius) ** 2) { enemy.takeDamage(this.damage * .25, game, "#adff6e"); enemy.applySlow(.82, .55); } if (Math.random() < .85) { const a = Math.random() * TAU; const r = Math.sqrt(Math.random()) * this.radius; if (game.particles.length < game.maxParticles) game.particles.push(new Particle(this.x + Math.cos(a) * r, this.y + Math.sin(a) * r, { vx: rand(-18, 18), vy: rand(-25, -4), radius: rand(3, 7), life: rand(.5, 1), color: "#adff6e", drag: 1.2, grow: 1.2 })); } } }
+  draw(ctx) { const alpha = clamp(this.life / this.duration, 0, 1); const pulse = 1 + Math.sin(this.phase) * .06; ctx.save(); ctx.globalAlpha = alpha * .75; ctx.shadowBlur = 24; ctx.shadowColor = "#adff6e"; const g = ctx.createRadialGradient(this.x, this.y, 0, this.x, this.y, this.radius * pulse); g.addColorStop(0, "rgba(173,255,110,.22)"); g.addColorStop(.62, "rgba(94,185,70,.14)"); g.addColorStop(1, "rgba(94,185,70,0)"); ctx.fillStyle = g; ctx.beginPath(); ctx.arc(this.x, this.y, this.radius * pulse, 0, TAU); ctx.fill(); ctx.restore(); }
+  get dead() { return this.life <= 0; }
+}
+
+class PoisonSporesWeapon extends Weapon {
+  constructor(game) { super(game, "Poison Spores"); this.cooldown = 4.05; this.radius = 72; this.damage = 31; this.duration = 4.4; this.clouds = 1; }
+  update(dt) { this.timer -= dt; if (this.timer > 0) return; this.timer = this.adjustedCooldown(this.cooldown); const p = this.game.player; for (let i = 0; i < this.clouds; i++) { const target = this.game.findClosestEnemy(p.x, p.y, 720); const a = target ? Math.atan2(target.y - p.y, target.x - p.x) + rand(-.45, .45) : Math.random() * TAU; const d = target ? Math.min(240, Math.sqrt((target.x - p.x) * (target.x - p.x) + (target.y - p.y) * (target.y - p.y))) : rand(50, 180); this.game.poisonClouds.push(new PoisonCloud(p.x + Math.cos(a) * d, p.y + Math.sin(a) * d, this.radius * p.zoneSizeMult, this.adjustedDamage(this.damage), this.duration)); } }
+  description() { return `облаков ${this.clouds}, яд/сек ${Math.round(this.adjustedDamage(this.damage))}`; }
+}
+
+class GravityWell {
+  constructor(x, y, radius, damage, duration, pull) { this.x = x; this.y = y; this.radius = radius; this.damage = damage; this.duration = duration; this.life = duration; this.pull = pull; this.tick = 0; this.phase = Math.random() * TAU; }
+  update(dt, game) { this.life -= dt; this.phase += dt * 5; this.tick -= dt; const nearby = game.getEnemiesNear(this.x, this.y, this.radius + 80); for (const enemy of nearby) { if (enemy.dead) continue; const dx = this.x - enemy.x; const dy = this.y - enemy.y; const d = Math.sqrt(dx * dx + dy * dy) || 1; if (d <= this.radius + enemy.radius) { const force = this.pull * (1 - d / this.radius); enemy.x += (dx / d) * force * dt; enemy.y += (dy / d) * force * dt; } } if (this.tick <= 0) { this.tick = .3; for (const enemy of nearby) if (!enemy.dead && distSq(this.x, this.y, enemy.x, enemy.y) <= (this.radius + enemy.radius) ** 2) enemy.takeDamage(this.damage * .3, game, "#9b7cff"); } }
+  draw(ctx) { const alpha = clamp(this.life / this.duration, 0, 1); ctx.save(); ctx.globalAlpha = alpha; ctx.translate(this.x, this.y); ctx.rotate(this.phase); ctx.shadowBlur = 30; ctx.shadowColor = "#9b7cff"; ctx.strokeStyle = "#9b7cff"; ctx.lineWidth = 3; for (let i = 0; i < 3; i++) { ctx.globalAlpha = alpha * (.55 - i * .11); ctx.beginPath(); ctx.ellipse(0, 0, this.radius * (1 - i * .13), this.radius * (.42 + i * .08), i * Math.PI / 3, 0, TAU); ctx.stroke(); } const g = ctx.createRadialGradient(0, 0, 0, 0, 0, this.radius); g.addColorStop(0, "rgba(155,124,255,.20)"); g.addColorStop(1, "rgba(155,124,255,0)"); ctx.fillStyle = g; ctx.beginPath(); ctx.arc(0, 0, this.radius, 0, TAU); ctx.fill(); ctx.restore(); }
+  get dead() { return this.life <= 0; }
+}
+
+class GravityWellWeapon extends Weapon {
+  constructor(game) { super(game, "Gravity Well"); this.cooldown = 6.6; this.radius = 148; this.damage = 40; this.duration = 3.2; this.pull = 310; }
+  update(dt) { this.timer -= dt; if (this.timer > 0) return; const target = this.game.findDensestEnemyCluster(850); if (!target) return; this.timer = this.adjustedCooldown(this.cooldown); this.game.gravityWells.push(new GravityWell(target.x, target.y, this.radius * this.game.player.zoneSizeMult, this.adjustedDamage(this.damage), this.duration, this.pull)); this.game.spawnParticles(target.x, target.y, 22, "#9b7cff", .55, 3.1); }
+  description() { return `стягивание, радиус ${Math.round(this.radius * this.game.player.zoneSizeMult)}`; }
+}
+
+class UpgradeSystem {
+  constructor(game) { this.game = game; this.currentChoices = []; this.cardsEl = document.getElementById("upgradeCards"); this.pool = this.createPool(); }
+
+  weaponUnlock(title, description, weaponName, rarity = "rare", weight = 6, icon = "weapon") {
+    return { title, description, rarity, weight, kind: "weapon", icon, condition: () => !this.game.hasWeapon(weaponName), apply: () => this.game.unlockWeapon(weaponName) };
+  }
+
+  weaponUpgrade(title, description, weaponName, rarity, weight, apply, icon = "upgrade") {
+    return { title, description, rarity, weight, kind: "upgrade", icon, condition: () => this.game.hasWeapon(weaponName), apply };
+  }
+
+  gearUnlock(title, description, gearName, rarity, weight, apply, icon = "gear") {
+    return { title, description, rarity, weight, kind: "gear", icon, condition: () => !this.game.hasGear(gearName), apply: () => this.game.unlockGear(gearName, apply) };
+  }
+
+  createPool() {
+    return [
+      { title: "Fleet Pulse", description: "+10% к скорости движения.", rarity: "common", weight: 12, kind: "upgrade", icon: "speed", apply: () => { this.game.player.speedMult *= 1.1; } },
+      { title: "Sharper Core", description: "+20% к урону всего оружия.", rarity: "rare", weight: 7, kind: "upgrade", icon: "damage", apply: () => { this.game.player.damageMult *= 1.2; } },
+      { title: "Rapid Sigils", description: "-15% к перезарядке всего оружия.", rarity: "rare", weight: 7, kind: "upgrade", icon: "clock", apply: () => { this.game.player.cooldownMult *= .85; } },
+      { title: "Kinetic Runes", description: "+10% скорость снарядов.", rarity: "common", weight: 8, kind: "upgrade", icon: "bolt", apply: () => { this.game.player.projectileSpeedMult *= 1.1; } },
+      { title: "Larger Rituals", description: "+15% размер зон, импульсов и радиусных атак.", rarity: "rare", weight: 7, kind: "upgrade", icon: "zone", apply: () => { this.game.player.zoneSizeMult *= 1.15; } },
+      { title: "Crystal Magnet", description: "+20% радиус сбора опыта.", rarity: "common", weight: 9, kind: "upgrade", icon: "magnet", apply: () => { this.game.player.magnetRadius *= 1.2; } },
+      { title: "Vital Shell", description: "+25 максимального HP и лечение на 25.", rarity: "rare", weight: 7, kind: "upgrade", icon: "heart", apply: () => { this.game.player.maxHp += 25; this.game.player.heal(25); } },
+      { title: "Emergency Bloom", description: "Восстановить 30 HP.", rarity: "common", weight: 10, kind: "upgrade", icon: "heart", apply: () => { this.game.player.heal(30); } },
+      { title: "Perfect Eclipse", description: "+35% урон всего оружия. Очень редкая находка.", rarity: "epic", weight: 2, kind: "upgrade", icon: "core", apply: () => { this.game.player.damageMult *= 1.35; } },
+      { title: "Time Fracture", description: "-25% к перезарядке всего оружия.", rarity: "epic", weight: 2, kind: "upgrade", icon: "clock", apply: () => { this.game.player.cooldownMult *= .75; } },
+
+
+      this.gearUnlock("Aegis Prism", "Шмотка: даёт энергетический щит, который периодически блокирует один удар.", "Aegis Prism", "epic", 3, () => { const p = this.game.player; p.shieldMax += 1; p.shieldCharges = Math.max(p.shieldCharges, 1); p.shieldCooldown = 18; }, "shield"),
+      this.gearUnlock("Magnet Crown", "Шмотка: резко увеличивает радиус притяжения кристаллов опыта.", "Magnet Crown", "rare", 5, () => { this.game.player.magnetRadius *= 1.85; }, "magnet"),
+      this.gearUnlock("Chrono Boots", "Шмотка: +12% скорости и замедляющая аура вокруг героя.", "Chrono Boots", "epic", 3, () => { this.game.player.speedMult *= 1.12; this.game.player.slowAura = .82; }, "boots"),
+      this.gearUnlock("Overload Core", "Шмотка: +18% урона и ещё -6% к перезарядке всего оружия.", "Overload Core", "epic", 3, () => { this.game.player.damageMult *= 1.18; this.game.player.cooldownMult *= .94; }, "core"),
+      this.gearUnlock("Phoenix Ember", "Шмотка: один раз спасает от смерти и возвращает 45% HP.", "Phoenix Ember", "epic", 2, () => { this.game.player.reviveCharges += 1; }, "feather"),
+      this.gearUnlock("Thorn Mantle", "Шмотка: враги получают ответный урон, когда пробивают героя.", "Thorn Mantle", "rare", 4, () => { this.game.player.thornDamage += 22; }, "thorns"),
+      this.gearUnlock("Scholar Lens", "Шмотка: +35% опыта со всех кристаллов. Быстрее разгоняет билд.", "Scholar Lens", "rare", 4, () => { this.game.player.xpMult *= 1.35; }, "lens"),
+      this.gearUnlock("Phantom Cloak", "Шмотка: 18% шанс полностью уклониться от удара.", "Phantom Cloak", "epic", 3, () => { this.game.player.dodgeChance += .18; }, "cloak"),
+      this.gearUnlock("Titan Frame", "Шмотка: +45 max HP и +10% урона, но герой чуть тяжелее.", "Titan Frame", "rare", 4, () => { const p = this.game.player; p.maxHp += 45; p.heal(45); p.damageMult *= 1.1; p.speedMult *= .96; }, "frame"),
+
+      this.weaponUnlock("Открыть Orbit Blades", "Вокруг героя начинают вращаться клинки, режущие толпу при касании.", "Orbit Blades", "rare", 6),
+      this.weaponUnlock("Открыть Fire Zone", "Создаёт горящие круги рядом с игроком и прожигает врагов внутри.", "Fire Zone", "rare", 6),
+      this.weaponUnlock("Открыть Shock Nova", "Периодически выпускает электрическое кольцо, отталкивающее волну врагов.", "Shock Nova", "epic", 4),
+      this.weaponUnlock("Открыть Frost Lance", "Пробивающее ледяное копьё замедляет плотные линии врагов.", "Frost Lance", "rare", 7),
+      this.weaponUnlock("Открыть Rune Mines", "Расставляет рунные мины, которые взрываются при приближении врагов.", "Rune Mines", "rare", 7),
+      this.weaponUnlock("Открыть Starfall", "Вызывает метеоры по скоплениям врагов с предупреждающими кругами.", "Starfall", "epic", 4),
+      this.weaponUnlock("Открыть Chain Lightning", "Молния перескакивает от врага к врагу и режет группы.", "Chain Lightning", "rare", 6),
+      this.weaponUnlock("Открыть Void Scythe", "Широкие серпы пустоты прорубают сектор перед героем.", "Void Scythe", "rare", 6),
+      this.weaponUnlock("Открыть Guardian Drone", "Дрон летает рядом и автоматически прожигает врагов лазером.", "Guardian Drone", "epic", 4),
+      this.weaponUnlock("Открыть Poison Spores", "Ядовитые облака замедляют и плавят врагов в зоне.", "Poison Spores", "rare", 6),
+      this.weaponUnlock("Открыть Gravity Well", "Воронка стягивает толпу в одну точку и наносит урон.", "Gravity Well", "epic", 4),
+
+      this.weaponUpgrade("Split Bolt", "+1 снаряд для Magic Bolt.", "Magic Bolt", "rare", 8, () => { this.game.magicBolt.projectileCount += 1; }),
+      this.weaponUpgrade("Bolt Overcharge", "+8 урона для Magic Bolt.", "Magic Bolt", "common", 10, () => { this.game.magicBolt.baseDamage += 8; }),
+      this.weaponUpgrade("Extra Orbit", "+1 вращающийся клинок.", "Orbit Blades", "rare", 7, () => { this.game.orbitBlades.count += 1; }),
+      this.weaponUpgrade("Wide Orbit", "+18 к радиусу вращающихся клинков.", "Orbit Blades", "common", 7, () => { this.game.orbitBlades.radius += 18; }),
+      this.weaponUpgrade("Blade Teeth", "+7 урона для Orbit Blades.", "Orbit Blades", "common", 8, () => { this.game.orbitBlades.damage += 7; }),
+      this.weaponUpgrade("Burning Ground", "+12 урона/сек для Fire Zone.", "Fire Zone", "common", 9, () => { this.game.fireZone.damage += 12; }),
+      this.weaponUpgrade("Twin Pyres", "+1 огненная зона за срабатывание.", "Fire Zone", "epic", 3, () => { this.game.fireZone.zones += 1; }),
+      this.weaponUpgrade("Long Flame", "+0.8 сек длительности Fire Zone.", "Fire Zone", "common", 8, () => { this.game.fireZone.duration += .8; }),
+      this.weaponUpgrade("Nova Battery", "+55 радиуса Shock Nova.", "Shock Nova", "rare", 6, () => { this.game.shockNova.maxRadius += 55; }),
+      this.weaponUpgrade("Thunder Heart", "+18 урона Shock Nova.", "Shock Nova", "rare", 7, () => { this.game.shockNova.damage += 18; }),
+      this.weaponUpgrade("Double Nova", "+1 дополнительная волна Shock Nova.", "Shock Nova", "epic", 2, () => { this.game.shockNova.waves += 1; }),
+      this.weaponUpgrade("Deep Freeze", "+1 пробитие Frost Lance.", "Frost Lance", "rare", 7, () => { this.game.frostLance.pierce += 1; }),
+      this.weaponUpgrade("Cold Needle", "+12 урона Frost Lance.", "Frost Lance", "common", 8, () => { this.game.frostLance.damage += 12; }),
+      this.weaponUpgrade("Minefield", "+1 мина за установку.", "Rune Mines", "rare", 6, () => { this.game.runeMines.mineCount += 1; }),
+      this.weaponUpgrade("Bigger Runes", "+18 радиуса взрыва Rune Mines.", "Rune Mines", "common", 8, () => { this.game.runeMines.radius += 18; }),
+      this.weaponUpgrade("Meteor Shower", "+1 метеор Starfall.", "Starfall", "rare", 6, () => { this.game.starfall.meteorCount += 1; }),
+      this.weaponUpgrade("Falling Sun", "+35 урона Starfall.", "Starfall", "common", 7, () => { this.game.starfall.damage += 35; }),
+      this.weaponUpgrade("Extra Jump", "+1 скачок Chain Lightning.", "Chain Lightning", "rare", 7, () => { this.game.chainLightning.jumps += 1; }),
+      this.weaponUpgrade("Charged Chain", "+10 урона Chain Lightning.", "Chain Lightning", "common", 8, () => { this.game.chainLightning.damage += 10; }),
+      this.weaponUpgrade("Second Scythe", "+1 серп Void Scythe.", "Void Scythe", "epic", 3, () => { this.game.voidScythe.slashes += 1; }),
+      this.weaponUpgrade("Long Reap", "+24 дальности Void Scythe.", "Void Scythe", "common", 8, () => { this.game.voidScythe.range += 24; }),
+      this.weaponUpgrade("Drone Swarm", "+1 Guardian Drone.", "Guardian Drone", "epic", 3, () => { this.game.guardianDrone.drones += 1; }),
+      this.weaponUpgrade("Sharper Beam", "+9 урона лазера дрона.", "Guardian Drone", "common", 8, () => { this.game.guardianDrone.damage += 9; }),
+      this.weaponUpgrade("Thick Spores", "+1 ядовитое облако.", "Poison Spores", "rare", 5, () => { this.game.poisonSpores.clouds += 1; }),
+      this.weaponUpgrade("Toxic Bloom", "+10 яд/сек Poison Spores.", "Poison Spores", "common", 8, () => { this.game.poisonSpores.damage += 10; }),
+      this.weaponUpgrade("Heavy Singularity", "+35 радиуса Gravity Well.", "Gravity Well", "rare", 6, () => { this.game.gravityWell.radius += 35; }),
+      this.weaponUpgrade("Dark Mass", "+18 урона Gravity Well.", "Gravity Well", "common", 7, () => { this.game.gravityWell.damage += 18; }),
+    ];
+  }
+
+  rollChoices() {
+    const choices = [];
+    const used = new Set();
+    const available = this.pool.filter((item) => !item.condition || item.condition());
+    while (choices.length < 3 && used.size < available.length) {
+      const totalWeight = available.reduce((sum, item) => sum + (used.has(item.title) ? 0 : item.weight), 0);
+      let pick = Math.random() * totalWeight;
+      for (const item of available) {
+        if (used.has(item.title)) continue;
+        pick -= item.weight;
+        if (pick <= 0) { choices.push(item); used.add(item.title); break; }
+      }
+    }
+    while (choices.length < 3) choices.push(this.pool[choices.length]);
+    this.currentChoices = choices;
+    this.renderChoices();
+  }
+
+
+  iconFor(choice) {
+    const text = `${choice.title} ${choice.description}`.toLowerCase();
+    if (choice.kind === "gear") return choice.icon || "gear";
+    if (choice.kind === "weapon") return choice.icon || "weapon";
+    if (text.includes("hp") || text.includes("леч")) return "heart";
+    if (text.includes("скор")) return "speed";
+    if (text.includes("урон")) return "damage";
+    if (text.includes("cooldown") || text.includes("перезар")) return "clock";
+    if (text.includes("радиус") || text.includes("зон")) return "zone";
+    if (text.includes("снаряд")) return "bolt";
+    return choice.icon || "upgrade";
+  }
+
+  iconSVG(choice) {
+    const icon = this.iconFor(choice);
+    const common = 'fill="none" stroke="currentColor" stroke-width="5" stroke-linecap="round" stroke-linejoin="round"';
+    const fill = 'fill="currentColor" opacity=".34"';
+    const icons = {
+      weapon: `<svg viewBox="0 0 100 100"><path ${common} d="M22 76 L78 24"/><path ${common} d="M61 22 L80 20 L78 39"/><path ${fill} d="M26 28 L50 18 L74 28 L64 54 L50 82 L36 54 Z"/></svg>`,
+      gear: `<svg viewBox="0 0 100 100"><path ${common} d="M28 38 h44 l8 38 H20 Z"/><path ${common} d="M36 38 C36 22 64 22 64 38"/><circle ${fill} cx="50" cy="58" r="13"/></svg>`,
+      shield: `<svg viewBox="0 0 100 100"><path ${fill} d="M50 12 L78 24 V48 C78 66 66 80 50 88 C34 80 22 66 22 48 V24 Z"/><path ${common} d="M50 12 L78 24 V48 C78 66 66 80 50 88 C34 80 22 66 22 48 V24 Z"/></svg>`,
+      blood: `<svg viewBox="0 0 100 100"><path ${fill} d="M50 12 C70 38 78 51 78 66 C78 82 66 91 50 91 C34 91 22 82 22 66 C22 51 30 38 50 12 Z"/><path ${common} d="M50 12 C70 38 78 51 78 66 C78 82 66 91 50 91 C34 91 22 82 22 66 C22 51 30 38 50 12 Z"/></svg>`,
+      magnet: `<svg viewBox="0 0 100 100"><path ${common} d="M25 26 v25 c0 33 50 33 50 0 V26"/><path ${common} d="M25 26 h18 M57 26 h18"/><path ${fill} d="M19 20 h28 v18 H19 Z M53 20 h28 v18 H53 Z"/></svg>`,
+      boots: `<svg viewBox="0 0 100 100"><path ${fill} d="M22 32 h22 l7 24 h26 c8 0 12 6 8 13 H37 c-10 0-15-5-15-15 Z"/><path ${common} d="M22 32 h22 l7 24 h26 c8 0 12 6 8 13 H37 c-10 0-15-5-15-15 Z"/><path ${common} d="M31 77 h40"/></svg>`,
+      core: `<svg viewBox="0 0 100 100"><path ${fill} d="M50 10 L82 30 V70 L50 90 L18 70 V30 Z"/><path ${common} d="M50 10 L82 30 V70 L50 90 L18 70 V30 Z"/><circle ${common} cx="50" cy="50" r="16"/></svg>`,
+      speed: `<svg viewBox="0 0 100 100"><path ${common} d="M18 62 C33 28 66 25 82 56"/><path ${common} d="M50 58 L70 36"/><path ${common} d="M22 78 h56"/></svg>`,
+      damage: `<svg viewBox="0 0 100 100"><path ${fill} d="M50 8 L59 38 L90 38 L65 57 L74 88 L50 69 L26 88 L35 57 L10 38 L41 38 Z"/><path ${common} d="M50 8 L59 38 L90 38 L65 57 L74 88 L50 69 L26 88 L35 57 L10 38 L41 38 Z"/></svg>`,
+      clock: `<svg viewBox="0 0 100 100"><circle ${common} cx="50" cy="50" r="34"/><path ${common} d="M50 28 v24 l18 10"/><path ${fill} d="M50 16 A34 34 0 0 1 84 50 H50 Z"/></svg>`,
+      zone: `<svg viewBox="0 0 100 100"><circle ${common} cx="50" cy="50" r="34"/><circle ${common} cx="50" cy="50" r="18"/><circle ${fill} cx="50" cy="50" r="28"/></svg>`,
+      bolt: `<svg viewBox="0 0 100 100"><path ${fill} d="M58 8 L24 55 H48 L40 92 L78 42 H53 Z"/><path ${common} d="M58 8 L24 55 H48 L40 92 L78 42 H53 Z"/></svg>`,
+      heart: `<svg viewBox="0 0 100 100"><path ${fill} d="M50 84 C20 62 14 48 18 34 C23 17 43 19 50 33 C57 19 77 17 82 34 C86 48 80 62 50 84 Z"/><path ${common} d="M50 84 C20 62 14 48 18 34 C23 17 43 19 50 33 C57 19 77 17 82 34 C86 48 80 62 50 84 Z"/></svg>`,
+      feather: `<svg viewBox="0 0 100 100"><path ${fill} d="M72 10 C36 22 18 50 21 86 C47 73 70 44 72 10 Z"/><path ${common} d="M72 10 C36 22 18 50 21 86 C47 73 70 44 72 10 Z"/><path ${common} d="M25 80 C38 58 52 38 69 17"/></svg>`,
+      thorns: `<svg viewBox="0 0 100 100"><path ${fill} d="M50 12 L62 38 L90 40 L68 58 L76 86 L50 70 L24 86 L32 58 L10 40 L38 38 Z"/><path ${common} d="M50 12 L62 38 L90 40 L68 58 L76 86 L50 70 L24 86 L32 58 L10 40 L38 38 Z"/></svg>`,
+      lens: `<svg viewBox="0 0 100 100"><circle ${fill} cx="44" cy="44" r="26"/><circle ${common} cx="44" cy="44" r="26"/><path ${common} d="M63 63 L83 83"/><path ${common} d="M34 44 h20 M44 34 v20"/></svg>`,
+      cloak: `<svg viewBox="0 0 100 100"><path ${fill} d="M50 12 C70 24 78 52 72 90 C57 80 43 80 28 90 C22 52 30 24 50 12 Z"/><path ${common} d="M50 12 C70 24 78 52 72 90 C57 80 43 80 28 90 C22 52 30 24 50 12 Z"/><path ${common} d="M38 42 C46 50 55 50 63 42"/></svg>`,
+      frame: `<svg viewBox="0 0 100 100"><path ${fill} d="M50 10 L82 28 V66 L50 90 L18 66 V28 Z"/><path ${common} d="M50 10 L82 28 V66 L50 90 L18 66 V28 Z"/><path ${common} d="M32 38 h36 M32 58 h36"/></svg>`,
+      upgrade: `<svg viewBox="0 0 100 100"><path ${common} d="M50 84 V18"/><path ${common} d="M26 42 L50 18 L74 42"/><path ${fill} d="M25 60 h50 v24 H25 Z"/></svg>`
+    };
+    return icons[icon] || icons.upgrade;
+  }
+
+  renderChoices() {
+    const labels = { common: "COMMON", rare: "RARE", epic: "EPIC" };
+    const kindLabel = { weapon: "Новое оружие", upgrade: "Улучшение", gear: "Шмотка / реликт" };
+    this.cardsEl.innerHTML = "";
+    this.currentChoices.forEach((choice, index) => {
+      const card = document.createElement("button");
+      card.className = `upgrade-card ${choice.rarity} ${choice.kind === "weapon" ? "weapon" : ""} ${choice.kind === "gear" ? "gear" : ""}`;
+      card.innerHTML = `
+        <div class="upgrade-topline">
+          <div class="upgrade-key">${index + 1}</div>
+          <div class="upgrade-rarity">${labels[choice.rarity] ?? choice.rarity}</div>
+        </div>
+        <div class="upgrade-sprite">${this.iconSVG(choice)}</div>
+        <div class="upgrade-kind">${kindLabel[choice.kind] ?? "Усиление"}</div>
+        <div class="upgrade-title">${choice.title}</div>
+        <div class="upgrade-description">${choice.description}</div>
+      `;
+      card.addEventListener("click", () => this.choose(index));
+      this.cardsEl.appendChild(card);
+    });
+  }
+
+  choose(index) {
+    if (this.game.state !== "levelup") return;
+    const choice = this.currentChoices[index];
+    if (!choice) return;
+    choice.apply();
+    this.game.spawnParticles(this.game.player.x, this.game.player.y, 34, "#fff1a8", .7, 3.3);
+    this.game.player.pendingLevelUps = Math.max(0, this.game.player.pendingLevelUps - 1);
+    if (this.game.player.pendingLevelUps > 0) this.rollChoices(); else this.game.closeLevelUp();
+  }
+}
+
+class Game {
+  constructor(canvas, ctx) {
+    this.canvas = canvas; this.ctx = ctx; this.input = new InputManager(this); this.camera = new Camera(); this.state = "start"; this.lastTime = 0; this.maxDt = 1 / 20; this.maxEnemies = 130; this.maxParticles = 220; this.spatialCellSize = 220; this.enemyGrid = new Map(); this.frameIndex = 0;
+    this.hud = document.getElementById("hud"); this.startScreen = document.getElementById("startScreen"); this.pauseScreen = document.getElementById("pauseScreen"); this.levelUpScreen = document.getElementById("levelUpScreen"); this.gameOverScreen = document.getElementById("gameOverScreen"); this.finalStats = document.getElementById("finalStats"); this.bossNotice = document.getElementById("bossNotice");
+    document.getElementById("startBtn").addEventListener("click", () => this.startRun()); document.getElementById("resumeBtn").addEventListener("click", () => this.togglePause()); document.getElementById("restartBtn").addEventListener("click", () => this.startRun());
+    window.addEventListener("resize", () => this.resize()); this.resize(); this.createBackgroundDust(); this.resetRunData(); requestAnimationFrame((time) => this.loop(time));
+  }
+
+  resize() { this.width = window.innerWidth; this.height = window.innerHeight; this.canvas.width = this.width; this.canvas.height = this.height; this.bgGradient = null; }
+  createBackgroundDust() { this.backgroundDust = []; for (let i = 0; i < 380; i++) this.backgroundDust.push({ x: rand(-7000, 7000), y: rand(-7000, 7000), r: rand(.6, 2.2), a: rand(.12, .55) }); }
+
+  resetRunData() {
+    this.player = new Player(this); this.enemies = []; this.projectiles = []; this.orbs = []; this.particles = []; this.fireZones = []; this.shockWaves = []; this.beams = []; this.mines = []; this.meteors = []; this.slashes = []; this.poisonClouds = []; this.gravityWells = [];
+    this.elapsed = 0; this.kills = 0; this.totalDamage = 0; this.xpCollected = 0; this.spawnTimer = 0; this.wave = 1; this.nextMiniBoss = 40; this.nextBoss = 105; this.miniBossIndex = 0; this.bossIndex = 0; this.noticeTime = 0; this.noticeText = ""; this.ownedGear = new Set(); this.hudTimer = 0; this.weaponHudSignature = "";
+    this.magicBolt = new MagicBoltWeapon(this); this.orbitBlades = new OrbitBladeWeapon(this); this.fireZone = new FireZoneWeapon(this); this.shockNova = new ShockNovaWeapon(this); this.frostLance = new FrostLanceWeapon(this); this.runeMines = new RuneMineWeapon(this); this.starfall = new StarfallWeapon(this); this.chainLightning = new ChainLightningWeapon(this); this.voidScythe = new VoidScytheWeapon(this); this.guardianDrone = new GuardianDroneWeapon(this); this.poisonSpores = new PoisonSporesWeapon(this); this.gravityWell = new GravityWellWeapon(this);
+    this.weaponRegistry = new Map([["Magic Bolt", this.magicBolt], ["Orbit Blades", this.orbitBlades], ["Fire Zone", this.fireZone], ["Shock Nova", this.shockNova], ["Frost Lance", this.frostLance], ["Rune Mines", this.runeMines], ["Starfall", this.starfall], ["Chain Lightning", this.chainLightning], ["Void Scythe", this.voidScythe], ["Guardian Drone", this.guardianDrone], ["Poison Spores", this.poisonSpores], ["Gravity Well", this.gravityWell]]);
+    this.weapons = [this.magicBolt];
+    this.upgradeSystem = new UpgradeSystem(this);
+  }
+
+  hasWeapon(name) { return this.weapons.some((weapon) => weapon.name === name); }
+  unlockWeapon(name) { const weapon = this.weaponRegistry.get(name); if (!weapon || this.hasWeapon(name)) return; this.weapons.push(weapon); this.weaponHudSignature = ""; this.showNotice(`Открыто оружие: ${name}`, "weapon"); this.camera.addShake(.9); }
+  hasGear(name) { return this.ownedGear.has(name); }
+  unlockGear(name, apply) { if (this.ownedGear.has(name)) return; this.ownedGear.add(name); apply(); this.weaponHudSignature = ""; this.showNotice(`Новая шмотка: ${name}`); this.spawnParticles(this.player.x, this.player.y, 28, "#9fffd8", .7, 3); this.camera.addShake(.75); }
+
+  startRun() { this.resetRunData(); this.state = "playing"; this.hud.classList.remove("hidden"); this.startScreen.classList.add("hidden"); this.startScreen.classList.remove("visible"); this.pauseScreen.classList.add("hidden"); this.levelUpScreen.classList.add("hidden"); this.gameOverScreen.classList.add("hidden"); this.bossNotice.classList.add("hidden"); }
+  togglePause() { if (this.state === "playing") { this.state = "paused"; this.pauseScreen.classList.remove("hidden"); this.pauseScreen.classList.add("visible"); } else if (this.state === "paused") { this.state = "playing"; this.pauseScreen.classList.add("hidden"); this.pauseScreen.classList.remove("visible"); } }
+  openLevelUp() { this.state = "levelup"; this.upgradeSystem.rollChoices(); this.levelUpScreen.classList.remove("hidden"); this.levelUpScreen.classList.add("visible"); }
+  closeLevelUp() { this.levelUpScreen.classList.add("hidden"); this.levelUpScreen.classList.remove("visible"); this.state = "playing"; }
+
+  endRun() {
+    if (this.state === "gameover") return;
+    this.state = "gameover"; this.hud.classList.add("hidden"); this.gameOverScreen.classList.remove("hidden"); this.gameOverScreen.classList.add("visible");
+    this.finalStats.innerHTML = `<div><span>Время</span><strong>${formatTime(this.elapsed)}</strong></div><div><span>Уровень</span><strong>${this.player.level}</strong></div><div><span>Убито врагов</span><strong>${this.kills}</strong></div><div><span>Урон</span><strong>${Math.round(this.totalDamage)}</strong></div><div><span>Опыт</span><strong>${this.xpCollected}</strong></div><div><span>Волна</span><strong>${this.wave}</strong></div><div><span>Оружий открыто</span><strong>${this.weapons.length}</strong></div><div><span>Босс-таймер</span><strong>${this.elapsed >= 120 ? "видел" : "не дошёл"}</strong></div>`;
+  }
+
+  loop(time) { const dt = Math.min(this.maxDt, (time - this.lastTime) / 1000 || 0); this.lastTime = time; if (this.state === "playing") this.update(dt); this.draw(); requestAnimationFrame((nextTime) => this.loop(nextTime)); }
+
+  update(dt) {
+    this.elapsed += dt; this.frameIndex += 1; this.wave = 1 + Math.floor(this.elapsed / 28); this.maxEnemies = Math.min(180, 70 + Math.floor(this.elapsed * .65));
+    this.player.update(dt); this.camera.update(this.player, dt); this.spawnEnemies(dt); this.spawnBosses(); this.buildEnemyGrid(); this.player.updateAuras(dt);
+    for (const weapon of this.weapons) weapon.update(dt);
+    for (const projectile of this.projectiles) projectile.update(dt, this);
+    for (const zone of this.fireZones) zone.update(dt, this);
+    for (const wave of this.shockWaves) wave.update(dt, this);
+    for (const beam of this.beams) beam.update(dt, this);
+    for (const mine of this.mines) mine.update(dt, this);
+    for (const meteor of this.meteors) meteor.update(dt, this);
+    for (const slash of this.slashes) slash.update(dt, this);
+    for (const cloud of this.poisonClouds) cloud.update(dt, this);
+    for (const well of this.gravityWells) well.update(dt, this);
+    for (const enemy of this.enemies) enemy.update(dt, this);
+    for (const orb of this.orbs) orb.update(dt, this);
+    for (const particle of this.particles) particle.update(dt, this);
+
+    const px = this.player.x, py = this.player.y;
+    compactInPlace(this.projectiles, (p) => !p.dead && distSq(p.x, p.y, px, py) < 1800 * 1800);
+    compactInPlace(this.fireZones, (z) => !z.dead);
+    compactInPlace(this.shockWaves, (w) => !w.dead);
+    compactInPlace(this.beams, (b) => !b.dead);
+    compactInPlace(this.mines, (m) => !m.dead && distSq(m.x, m.y, px, py) < 2200 * 2200);
+    compactInPlace(this.meteors, (m) => !m.dead);
+    compactInPlace(this.slashes, (s) => !s.dead);
+    compactInPlace(this.poisonClouds, (c) => !c.dead);
+    compactInPlace(this.gravityWells, (w) => !w.dead);
+    compactInPlace(this.enemies, (e) => !e.dead && distSq(e.x, e.y, px, py) < (e.config.tier ? 5200 * 5200 : 2300 * 2300));
+    compactInPlace(this.orbs, (o) => !o.dead && distSq(o.x, o.y, px, py) < 2500 * 2500);
+    compactInPlace(this.particles, (p) => !p.dead);
+    if (this.particles.length > this.maxParticles) this.particles.splice(0, this.particles.length - this.maxParticles);
+    this.updateHUD(dt); this.updateNotice(dt);
+  }
+
+  showNotice(text) { this.noticeText = text; this.noticeTime = 3.2; this.bossNotice.textContent = text; this.bossNotice.classList.remove("hidden"); }
+  updateNotice(dt) { if (this.noticeTime > 0) { this.noticeTime -= dt; if (this.noticeTime <= 0) this.bossNotice.classList.add("hidden"); } }
+  isNearPlayer(entity, distance) { return distSq(entity.x, entity.y, this.player.x, this.player.y) < distance * distance; }
+
+  spawnBosses() {
+    const difficulty = this.elapsed / 60;
+    if (this.elapsed >= this.nextMiniBoss) {
+      const minis = ["miniBoss", "miniBoss2", "miniBoss3", "miniBoss4", "miniBoss5"];
+      const type = minis[this.miniBossIndex % minis.length];
+      this.miniBossIndex += 1;
+      this.spawnSpecialEnemy(type, difficulty);
+      this.showNotice(`МИНИ-БОСС: ${ENEMY_TYPES[type].name}`);
+      this.nextMiniBoss += Math.max(42, 62 - difficulty * 3);
+    }
+    if (this.elapsed >= this.nextBoss) {
+      const bosses = ["boss", "boss2", "boss3", "boss4", "boss5"];
+      const type = bosses[this.bossIndex % bosses.length];
+      this.bossIndex += 1;
+      this.spawnSpecialEnemy(type, difficulty);
+      this.showNotice(`БОСС: ${ENEMY_TYPES[type].name}`);
+      this.nextBoss += Math.max(92, 122 - difficulty * 4);
+    }
+  }
+
+  spawnEnemies(dt) { this.spawnTimer -= dt; const difficulty = this.elapsed / 60; const interval = clamp(.78 - difficulty * .12, .11, .78); if (this.spawnTimer > 0 || this.enemies.length >= this.maxEnemies) return; this.spawnTimer = interval; let count = 1 + Math.floor(difficulty * .85); if (Math.random() < difficulty * .38) count += 1; count = Math.min(count, 8); for (let i = 0; i < count && this.enemies.length < this.maxEnemies; i++) this.spawnEnemy(difficulty); }
+
+  enemyWeights(difficulty) {
+    const t = this.elapsed;
+    const arr = [{ type: "skitter", w: 20 }, { type: "husk", w: 18 }, { type: "glasswing", w: 10 }, { type: "needle", w: 10 }];
+    if (t > 10) arr.push({ type: "embermite", w: 12 }, { type: "stalker", w: 10 });
+    if (t > 18) arr.push({ type: "orbWeaver", w: 10 }, { type: "razorFan", w: 9 });
+    if (t > 26) arr.push({ type: "bulwark", w: 8 + difficulty * 3 }, { type: "lanternEye", w: 8 });
+    if (t > 36) arr.push({ type: "phaseShade", w: 9 }, { type: "rammer", w: 9 + difficulty * 1.7 });
+    if (t > 48) arr.push({ type: "thornBeast", w: 9 }, { type: "sporeling", w: 9 });
+    if (t > 60) arr.push({ type: "obsidianCrawler", w: 8 + difficulty * 2 }, { type: "voidMaw", w: 8 });
+    if (t > 74) arr.push({ type: "magmaCrawler", w: 7 }, { type: "splitter", w: 8 });
+    arr.push({ type: "elite", w: clamp(1 + difficulty * 3.2, 1, 14) });
+    if (t > 85) arr.push({ type: "elite2", w: clamp(1 + difficulty * 2.4, 1, 10) });
+    if (t > 110) arr.push({ type: "elite3", w: clamp(1 + difficulty * 2.1, 1, 9) });
+    return arr;
+  }
+
+  spawnEnemy(difficulty) { const weights = this.enemyWeights(difficulty); const total = weights.reduce((s, v) => s + v.w, 0); let pick = Math.random() * total; let type = "husk"; for (const item of weights) { pick -= item.w; if (pick <= 0) { type = item.type; break; } } this.spawnSpecialEnemy(type, difficulty); }
+
+  spawnSpecialEnemy(type, difficulty) { const margin = ENEMY_TYPES[type].tier ? 260 : 115; const halfW = this.width / 2; const halfH = this.height / 2; const angle = Math.random() * TAU; const spawnRadius = Math.max(halfW, halfH) + margin + rand(0, ENEMY_TYPES[type].tier ? 360 : 260); const x = this.player.x + Math.cos(angle) * spawnRadius; const y = this.player.y + Math.sin(angle) * spawnRadius; this.enemies.push(new Enemy(type, x, y, difficulty)); }
+
+  buildEnemyGrid() { this.enemyGrid.clear(); const size = this.spatialCellSize; const enemies = this.enemies; for (let i = 0; i < enemies.length; i++) { const enemy = enemies[i]; if (enemy.dead) continue; const cx = Math.floor(enemy.x / size) + 32768; const cy = Math.floor(enemy.y / size) + 32768; const key = cx * 65536 + cy; let cell = this.enemyGrid.get(key); if (!cell) { cell = []; this.enemyGrid.set(key, cell); } cell.push(enemy); } }
+  getEnemiesNear(x, y, radius) { const size = this.spatialCellSize; const minX = Math.floor((x - radius) / size) + 32768; const maxX = Math.floor((x + radius) / size) + 32768; const minY = Math.floor((y - radius) / size) + 32768; const maxY = Math.floor((y + radius) / size) + 32768; const result = []; const grid = this.enemyGrid; for (let cy = minY; cy <= maxY; cy++) for (let cx = minX; cx <= maxX; cx++) { const cell = grid.get(cx * 65536 + cy); if (!cell) continue; for (let i = 0; i < cell.length; i++) result.push(cell[i]); } return result; }
+
+  findClosestEnemy(x, y, range = Infinity) {
+    let best = null; let bestDist = range * range;
+    const pool = Number.isFinite(range) ? this.getEnemiesNear(x, y, range) : this.enemies;
+    for (const enemy of pool) { if (enemy.dead) continue; const ds = distSq(x, y, enemy.x, enemy.y); if (ds < bestDist) { best = enemy; bestDist = ds; } }
+    return best;
+  }
+  findDensestEnemyCluster(range = 900) {
+    let best = null; let bestScore = -1;
+    const inRange = this.getEnemiesNear(this.player.x, this.player.y, range).filter(e => !e.dead && distSq(e.x, e.y, this.player.x, this.player.y) <= range * range);
+    for (const enemy of inRange) {
+      let score = enemy.config.tier ? 8 : 1;
+      const local = this.getEnemiesNear(enemy.x, enemy.y, 180);
+      for (const other of local) if (!other.dead && distSq(enemy.x, enemy.y, other.x, other.y) < 180 * 180) score += other.config.tier ? 5 : 1;
+      if (score > bestScore) { bestScore = score; best = enemy; }
+    }
+    return best;
+  }
+  isOnScreen(entity, padding = 120) { return entity.x > this.camera.x - this.width / 2 - padding && entity.x < this.camera.x + this.width / 2 + padding && entity.y > this.camera.y - this.height / 2 - padding && entity.y < this.camera.y + this.height / 2 + padding; }
+
+  spawnParticles(x, y, count, color, life = .45, speed = 2.4) { const available = Math.max(0, this.maxParticles - this.particles.length); const amount = Math.min(count, available); for (let i = 0; i < amount; i++) { const angle = Math.random() * TAU; const velocity = rand(35, 120) * speed; this.particles.push(new Particle(x, y, { vx: Math.cos(angle) * velocity, vy: Math.sin(angle) * velocity, radius: rand(1.5, 4.8), life: rand(life * .55, life * 1.25), color, drag: rand(3.8, 7.2), grow: rand(-1.3, 1.2) })); } }
+
+  updateHUD(dt = 0) {
+    this.hudTimer -= dt;
+    if (this.hudTimer > 0) return;
+    this.hudTimer = .085;
+    document.getElementById("hpText").textContent = `${Math.ceil(this.player.hp)} / ${this.player.maxHp}`;
+    document.getElementById("hpFill").style.width = `${clamp(this.player.hp / this.player.maxHp, 0, 1) * 100}%`;
+    document.getElementById("xpText").textContent = `${Math.floor(this.player.xp)} / ${this.player.xpToNext}`;
+    document.getElementById("xpFill").style.width = `${clamp(this.player.xp / this.player.xpToNext, 0, 1) * 100}%`;
+    document.getElementById("levelText").textContent = this.player.level;
+    document.getElementById("timeText").textContent = formatTime(this.elapsed);
+    document.getElementById("killsText").textContent = this.kills;
+    document.getElementById("waveText").textContent = this.wave;
+    const signature = this.weapons.map((weapon) => `${weapon.name}:${weapon.description()}`).join("|") + `|gear:${[...this.ownedGear].join(",")}`;
+    if (signature !== this.weaponHudSignature) {
+      this.weaponHudSignature = signature;
+      const list = document.getElementById("weaponList");
+      const gear = [...this.ownedGear].map((name) => `<div class="weapon-pill"><b>${name}</b> · шмотка</div>`).join("");
+      list.innerHTML = this.weapons.map((weapon) => `<div class="weapon-pill"><b>${weapon.name}</b> · ${weapon.description()}</div>`).join("") + gear;
+    }
+  }
+
+  draw() { ctx.clearRect(0, 0, this.width, this.height); this.drawScreenBackground(); this.camera.begin(ctx, this); this.drawWorldBackground(ctx); for (const orb of this.orbs) if (this.isOnScreen(orb, 80)) orb.draw(ctx); for (const mine of this.mines) mine.draw(ctx); for (const zone of this.fireZones) zone.draw(ctx); for (const cloud of this.poisonClouds) cloud.draw(ctx); for (const well of this.gravityWells) well.draw(ctx); for (const meteor of this.meteors) meteor.draw(ctx); for (const wave of this.shockWaves) wave.draw(ctx); for (const slash of this.slashes) slash.draw(ctx); for (const weapon of this.weapons) weapon.draw(ctx); for (const projectile of this.projectiles) if (this.isOnScreen(projectile, 80)) projectile.draw(ctx); for (const enemy of this.enemies) if (this.isOnScreen(enemy, 150)) enemy.draw(ctx); for (const beam of this.beams) beam.draw(ctx); this.player.draw(ctx); for (const particle of this.particles) if (this.isOnScreen(particle, 80)) particle.draw(ctx); this.camera.end(ctx); }
+
+  drawScreenBackground() { if (!this.bgGradient) { const g = ctx.createRadialGradient(this.width / 2, this.height / 2, 0, this.width / 2, this.height / 2, Math.max(this.width, this.height) * .72); g.addColorStop(0, "#12182d"); g.addColorStop(.62, "#070914"); g.addColorStop(1, "#03040a"); this.bgGradient = g; } ctx.fillStyle = this.bgGradient; ctx.fillRect(0, 0, this.width, this.height); }
+  drawWorldBackground(ctx) { const viewLeft = this.camera.x - this.width / 2 - 80; const viewRight = this.camera.x + this.width / 2 + 80; const viewTop = this.camera.y - this.height / 2 - 80; const viewBottom = this.camera.y + this.height / 2 + 80; ctx.save(); ctx.strokeStyle = "rgba(117,143,255,.08)"; ctx.lineWidth = 1; const grid = 80; const startX = Math.floor(viewLeft / grid) * grid; const startY = Math.floor(viewTop / grid) * grid; ctx.beginPath(); for (let x = startX; x <= viewRight; x += grid) { ctx.moveTo(x, viewTop); ctx.lineTo(x, viewBottom); } for (let y = startY; y <= viewBottom; y += grid) { ctx.moveTo(viewLeft, y); ctx.lineTo(viewRight, y); } ctx.stroke(); ctx.strokeStyle = "rgba(117,143,255,.13)"; ctx.lineWidth = 1.4; const bigGrid = 400; const bigStartX = Math.floor(viewLeft / bigGrid) * bigGrid; const bigStartY = Math.floor(viewTop / bigGrid) * bigGrid; ctx.beginPath(); for (let x = bigStartX; x <= viewRight; x += bigGrid) { ctx.moveTo(x, viewTop); ctx.lineTo(x, viewBottom); } for (let y = bigStartY; y <= viewBottom; y += bigGrid) { ctx.moveTo(viewLeft, y); ctx.lineTo(viewRight, y); } ctx.stroke(); ctx.fillStyle = "#9db8ff"; for (const dust of this.backgroundDust) { if (dust.x < viewLeft || dust.x > viewRight || dust.y < viewTop || dust.y > viewBottom) continue; ctx.globalAlpha = dust.a; ctx.beginPath(); ctx.arc(dust.x, dust.y, dust.r, 0, TAU); ctx.fill(); } ctx.globalAlpha = 1; ctx.restore(); }
+}
+
+const game = new Game(canvas, ctx);
+  </script>
+</body>
+</html>

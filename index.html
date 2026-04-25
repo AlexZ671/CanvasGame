@@ -1560,7 +1560,69 @@ class Game {
     }
   }
 
-  draw() { ctx.clearRect(0, 0, this.width, this.height); this.drawScreenBackground(); this.camera.begin(ctx, this); this.drawWorldBackground(ctx); for (const orb of this.orbs) if (this.isOnScreen(orb, 80)) orb.draw(ctx); for (const mine of this.mines) mine.draw(ctx); for (const zone of this.fireZones) zone.draw(ctx); for (const cloud of this.poisonClouds) cloud.draw(ctx); for (const well of this.gravityWells) well.draw(ctx); for (const meteor of this.meteors) meteor.draw(ctx); for (const wave of this.shockWaves) wave.draw(ctx); for (const slash of this.slashes) slash.draw(ctx); for (const weapon of this.weapons) weapon.draw(ctx); for (const projectile of this.projectiles) if (this.isOnScreen(projectile, 80)) projectile.draw(ctx); for (const enemy of this.enemies) if (this.isOnScreen(enemy, 150)) enemy.draw(ctx); for (const beam of this.beams) beam.draw(ctx); this.player.draw(ctx); for (const particle of this.particles) if (this.isOnScreen(particle, 80)) particle.draw(ctx); this.camera.end(ctx); }
+  draw() {
+    ctx.clearRect(0, 0, this.width, this.height);
+    this.drawScreenBackground();
+    this.camera.begin(ctx, this);
+    this.drawWorldBackground(ctx);
+    for (const orb of this.orbs) if (this.isOnScreen(orb, 80)) orb.draw(ctx);
+    for (const mine of this.mines) mine.draw(ctx);
+    for (const zone of this.fireZones) zone.draw(ctx);
+    for (const cloud of this.poisonClouds) cloud.draw(ctx);
+    for (const well of this.gravityWells) well.draw(ctx);
+    for (const meteor of this.meteors) meteor.draw(ctx);
+    for (const wave of this.shockWaves) wave.draw(ctx);
+    for (const slash of this.slashes) slash.draw(ctx);
+    for (const weapon of this.weapons) weapon.draw(ctx);
+    for (const projectile of this.projectiles) if (this.isOnScreen(projectile, 80)) projectile.draw(ctx);
+    this.drawEnemiesFast(ctx);
+    for (const beam of this.beams) beam.draw(ctx);
+    this.player.draw(ctx);
+    for (const particle of this.particles) if (this.isOnScreen(particle, 80)) particle.draw(ctx);
+    this.camera.end(ctx);
+  }
+
+  drawEnemiesFast(ctx) {
+    const cam = this.camera;
+    const offsetX = this.width / 2 - cam.x + cam.offsetX;
+    const offsetY = this.height / 2 - cam.y + cam.offsetY;
+    const enemies = this.enemies;
+    const padX = this.width / 2 + 150;
+    const padY = this.height / 2 + 150;
+
+    for (let i = 0; i < enemies.length; i++) {
+      const e = enemies[i];
+      if (e.dead || !e.config.tier) continue;
+      if (Math.abs(e.x - cam.x) > padX || Math.abs(e.y - cam.y) > padY) continue;
+      e.draw(ctx);
+    }
+
+    for (let i = 0; i < enemies.length; i++) {
+      const e = enemies[i];
+      if (e.dead || e.config.tier) continue;
+      if (Math.abs(e.x - cam.x) > padX || Math.abs(e.y - cam.y) > padY) continue;
+      const sprite = getEnemySprite(e.config, e.radius, e.flash > 0.05);
+      const c = Math.cos(e.angle);
+      const s = Math.sin(e.angle);
+      ctx.setTransform(c, s, -s, c, e.x + offsetX, e.y + offsetY);
+      ctx.drawImage(sprite.canvas, -sprite.half, -sprite.half);
+    }
+    ctx.setTransform(1, 0, 0, 1, offsetX, offsetY);
+
+    for (let i = 0; i < enemies.length; i++) {
+      const e = enemies[i];
+      if (e.dead || e.config.tier) continue;
+      if (e.hp >= e.maxHp) continue;
+      if (Math.abs(e.x - cam.x) > padX || Math.abs(e.y - cam.y) > padY) continue;
+      const w = e.radius * 2.2;
+      const x = e.x - w / 2;
+      const y = e.y - e.radius - 14;
+      ctx.fillStyle = "rgba(0,0,0,.54)";
+      ctx.fillRect(x, y, w, 5);
+      ctx.fillStyle = e.config.color;
+      ctx.fillRect(x, y, w * clamp(e.hp / e.maxHp, 0, 1), 5);
+    }
+  }
 
   drawScreenBackground() { if (!this.bgGradient) { const g = ctx.createRadialGradient(this.width / 2, this.height / 2, 0, this.width / 2, this.height / 2, Math.max(this.width, this.height) * .72); g.addColorStop(0, "#12182d"); g.addColorStop(.62, "#070914"); g.addColorStop(1, "#03040a"); this.bgGradient = g; } ctx.fillStyle = this.bgGradient; ctx.fillRect(0, 0, this.width, this.height); }
   drawWorldBackground(ctx) { const viewLeft = this.camera.x - this.width / 2 - 80; const viewRight = this.camera.x + this.width / 2 + 80; const viewTop = this.camera.y - this.height / 2 - 80; const viewBottom = this.camera.y + this.height / 2 + 80; ctx.save(); ctx.strokeStyle = "rgba(117,143,255,.08)"; ctx.lineWidth = 1; const grid = 80; const startX = Math.floor(viewLeft / grid) * grid; const startY = Math.floor(viewTop / grid) * grid; ctx.beginPath(); for (let x = startX; x <= viewRight; x += grid) { ctx.moveTo(x, viewTop); ctx.lineTo(x, viewBottom); } for (let y = startY; y <= viewBottom; y += grid) { ctx.moveTo(viewLeft, y); ctx.lineTo(viewRight, y); } ctx.stroke(); ctx.strokeStyle = "rgba(117,143,255,.13)"; ctx.lineWidth = 1.4; const bigGrid = 400; const bigStartX = Math.floor(viewLeft / bigGrid) * bigGrid; const bigStartY = Math.floor(viewTop / bigGrid) * bigGrid; ctx.beginPath(); for (let x = bigStartX; x <= viewRight; x += bigGrid) { ctx.moveTo(x, viewTop); ctx.lineTo(x, viewBottom); } for (let y = bigStartY; y <= viewBottom; y += bigGrid) { ctx.moveTo(viewLeft, y); ctx.lineTo(viewRight, y); } ctx.stroke(); ctx.fillStyle = "#9db8ff"; for (const dust of this.backgroundDust) { if (dust.x < viewLeft || dust.x > viewRight || dust.y < viewTop || dust.y > viewBottom) continue; ctx.globalAlpha = dust.a; ctx.beginPath(); ctx.arc(dust.x, dust.y, dust.r, 0, TAU); ctx.fill(); } ctx.globalAlpha = 1; ctx.restore(); }

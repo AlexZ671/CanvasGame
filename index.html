@@ -778,6 +778,24 @@ function drawEnemyEye(ctx, r, color = "#fff") {
   ctx.beginPath(); ctx.arc(r * .31, 0, r * .07, 0, TAU); ctx.fill();
 }
 
+const enemySpriteCache = new Map();
+function getEnemySprite(cfg, radius, flash) {
+  const key = (flash ? "f|" : "n|") + cfg.shape + "|" + radius;
+  let entry = enemySpriteCache.get(key);
+  if (entry) return entry;
+  const pad = Math.ceil(radius * 2.2);
+  const size = pad * 2;
+  const c = document.createElement("canvas");
+  c.width = size;
+  c.height = size;
+  const cx = c.getContext("2d");
+  cx.translate(pad, pad);
+  drawEnemySilhouette(cx, { radius, wobble: 0, flash: flash ? 1 : 0 }, cfg);
+  entry = { canvas: c, half: pad };
+  enemySpriteCache.set(key, entry);
+  return entry;
+}
+
 function drawEnemySilhouette(ctx, enemy, cfg) {
   const r = enemy.radius;
   const wob = Math.sin(enemy.wobble * 2) * .08;
@@ -1009,8 +1027,11 @@ class Enemy {
     if (cfg.tier) {
       ctx.shadowBlur = 26;
       ctx.shadowColor = cfg.color;
+      drawEnemySilhouette(ctx, this, cfg);
+    } else {
+      const sprite = getEnemySprite(cfg, this.radius, this.flash > 0.05);
+      ctx.drawImage(sprite.canvas, -sprite.half, -sprite.half);
     }
-    drawEnemySilhouette(ctx, this, cfg);
     ctx.restore();
     this.drawHealthBar(ctx);
   }
